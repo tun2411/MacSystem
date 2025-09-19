@@ -63,6 +63,27 @@ public class DataSeeder {
                 agents.save(neg);
                 agents.save(neu);
                 agents.save(sup);
+
+                Agent staffAgent = new Agent();
+                staffAgent.setId(Ids.newUuid());
+                staffAgent.setHandle("staff-agent");
+                staffAgent.setDisplayName("Staff Agent");
+                staffAgent.setKind("StaffAgent");
+                staffAgent.setActive(true);
+                staffAgent.setCreatedAt(Instant.now());
+                agents.save(staffAgent);
+            }
+
+            // Ensure StaffAgent exists even if DB already had agents
+            if (agents.findByKind("StaffAgent").isEmpty()) {
+                Agent staffAgent = new Agent();
+                staffAgent.setId(Ids.newUuid());
+                staffAgent.setHandle("staff-agent");
+                staffAgent.setDisplayName("Staff Agent");
+                staffAgent.setKind("StaffAgent");
+                staffAgent.setActive(true);
+                staffAgent.setCreatedAt(Instant.now());
+                agents.save(staffAgent);
             }
         };
     }

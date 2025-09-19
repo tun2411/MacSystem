@@ -20,11 +20,16 @@
         .meta{font-size:12px;color:#888;margin-bottom:6px}
         form{display:flex;gap:8px;padding:12px;border-top:1px solid #eee;position:sticky;bottom:0;background:#fff}
         textarea{flex:1;padding:8px}
+        .header-actions{float:right}
+        .header-actions a{margin-left:8px}
     </style>
     </head>
 <body>
 <header>
-    <a th:href="@{/}">◀ Back</a>
+    <a th:href="@{/conversations}">◀ Back</a>
+    <span class="header-actions">
+        <a th:href="@{'/chat/' + ${conversationId} + '/agents'}">Manage agents</a>
+    </span>
 </header>
 <main>
     <div id="messages" class="messages">

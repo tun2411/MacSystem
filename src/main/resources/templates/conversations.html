@@ -4,34 +4,90 @@
     <meta charset="UTF-8"/>
     <title>Conversations</title>
     <style>
-        body{font-family:Arial, sans-serif;padding:24px}
-        table{border-collapse:collapse;width:100%}
-        th,td{border:1px solid #eee;padding:8px}
-        th{background:#fafafa;text-align:left}
-        a.btn{display:inline-block;padding:6px 10px;border:1px solid #1890ff;color:#1890ff;border-radius:6px;text-decoration:none}
-        .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+        :root{--text:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--line:#e5e7eb;--primary:#2563eb;--primary-weak:#dbeafe;--success:#16a34a;--warning:#d97706;--danger:#dc2626}
+        *{box-sizing:border-box}
+        body{font-family:Arial, sans-serif;margin:0;background:var(--bg);color:var(--text)}
+        .container{max-width:1040px;margin:0 auto;padding:24px}
+        .top{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:16px}
+        h2{margin:0;font-size:22px}
+        a.btn{display:inline-block;padding:8px 12px;border:1px solid var(--primary);color:var(--primary);border-radius:8px;text-decoration:none;background:var(--primary-weak)}
+        .toolbar{display:flex;gap:12px;align-items:center;flex:1;justify-content:flex-end}
+        .search{position:relative;min-width:240px}
+        .search input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .15s ease, transform .15s ease}
+        .card:hover{box-shadow:0 6px 20px rgba(0,0,0,0.06);transform:translateY(-1px)}
+        .title{font-weight:bold;font-size:16px;line-height:1.35}
+        .meta{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
+        .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:999px;padding:4px 8px;border:1px solid var(--line);background:#fff}
+        .badge .dot{width:8px;height:8px;border-radius:50%}
+        .badge.active{border-color:#a7f3d0;background:#ecfdf5}
+        .badge.active .dot{background:var(--success)}
+        .badge.pending{border-color:#fde68a;background:#fffbeb}
+        .badge.pending .dot{background:var(--warning)}
+        .badge.closed{border-color:#fecaca;background:#fef2f2}
+        .badge.closed .dot{background:var(--danger)}
+        .actions{display:flex;gap:8px}
+        .link{padding:6px 10px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--text);background:#fff}
+        .link.primary{border-color:var(--primary);color:#fff;background:var(--primary)}
+        .empty{border:1px dashed var(--line);border-radius:12px;padding:24px;text-align:center;color:var(--muted);background:#fff}
     </style>
-</head>
+    </head>
 <body>
-<div class="top">
+<div class="container">
+  <div class="top">
     <h2>Conversations</h2>
-    <div>
-        <a class="btn" th:href="@{/}">New conversation</a>
+    <div class="toolbar">
+      <div class="search">
+        <input id="search" type="text" placeholder="Tìm theo tiêu đề hoặc trạng thái..." autocomplete="off" />
+      </div>
+      <a class="btn" th:href="@{/conversations/new}">New conversation</a>
     </div>
- </div>
-<table>
-    <thead>
-        <tr><th>Title</th><th>Status</th><th>Created At</th><th>Action</th></tr>
-    </thead>
-    <tbody>
-        <tr th:each="c: ${conversations}">
-            <td th:text="${c.title}">Title</td>
-            <td th:text="${c.status}">active</td>
-            <td th:text="${c.createdAt}">time</td>
-            <td><a th:href="@{'/chat/' + ${c.id}}">Open</a></td>
-        </tr>
-    </tbody>
-</table>
+  </div>
+
+  <div class="empty" th:if="${conversations} == null or ${#lists.isEmpty(conversations)}">
+    Chưa có cuộc hội thoại nào.
+  </div>
+
+  <div id="cards" class="grid" th:if="${conversations} != null and !${#lists.isEmpty(conversations)}">
+    <div class="card" th:each="c: ${conversations}"
+         th:attr="data-title=${#strings.toLowerCase(c.title)},data-status=${#strings.toLowerCase(c.status)}">
+      <div class="title" th:text="${c.title}">Title</div>
+      <div class="meta">
+        <div th:class="${'badge ' + #strings.toLowerCase(c.status)}">
+          <span class="dot"></span>
+          <span th:text="${c.status}">active</span>
+        </div>
+        <div th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">time</div>
+      </div>
+      <div class="actions">
+        <a class="link" th:href="@{'/chat/' + ${c.id}}">Open</a>
+        <a class="link primary" th:href="@{'/chat/' + ${c.id}}">Chat</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var input = document.getElementById('search');
+    var list = document.getElementById('cards');
+    if (!input || !list) return;
+    function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
+    function apply(){
+      var q = normalize(input.value);
+      var items = list.children;
+      for (var i=0;i<items.length;i++){
+        var el = items[i];
+        var t = el.getAttribute('data-title') || '';
+        var st = el.getAttribute('data-status') || '';
+        var show = !q || t.indexOf(q) > -1 || st.indexOf(q) > -1;
+        el.style.display = show ? '' : 'none';
+      }
+    }
+    input.addEventListener('input', apply);
+  })();
+</script>
 </body>
 </html>
 

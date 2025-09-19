@@ -4,28 +4,60 @@
     <meta charset="UTF-8"/>
     <title>Start Conversation</title>
     <style>
-        body{font-family:Arial, sans-serif;padding:24px}
-        .agents{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0}
-        .agent{border:1px solid #ddd;padding:8px 12px;border-radius:8px}
-        button{padding:8px 12px}
-        input[type=text]{padding:8px;width:320px}
+        :root{--text:#1f2937;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff;--line:#e5e7eb;--primary:#2563eb;--primary-weak:#dbeafe}
+        body{font-family:Arial, sans-serif;margin:0;background:var(--bg);color:var(--text)}
+        .wrap{max-width:1040px;margin:0 auto;padding:24px}
+        .agents{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+        .agent{border:1px solid var(--line);padding:8px 12px;border-radius:8px;background:#fff}
+        button{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#fff}
+        input[type=text]{padding:10px 12px;width:100%;max-width:420px;border:1px solid var(--line);border-radius:8px}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+        table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+        th,td{border-bottom:1px solid var(--line);padding:10px 12px}
+        th{text-align:left;background:#f9fafb}
+        a.btn{display:inline-block;padding:8px 12px;border:1px solid var(--primary);color:var(--primary);border-radius:8px;text-decoration:none;background:var(--primary-weak)}
     </style>
     </head>
 <body>
-<h2>New Conversation</h2>
-<form method="post" th:action="@{/start}">
-    <label>Title</label>
-    <input type="text" name="title" placeholder="Ecommerce support" required />
-    <div class="agents">
-        <div class="agent" th:each="a: ${agents}">
-            <label>
-                <input type="checkbox" name="agentIds" th:value="${a.id}" />
-                <span th:text="${a.displayName} + ' (' + ${a.kind} + ')'">Agent</span>
-            </label>
-        </div>
+<div class="wrap">
+<div class="grid">
+  <div>
+    <h2>New Conversation</h2>
+    <div th:if="${myConversations} != null" style="margin:8px 0 16px 0;">
+        <form method="post" th:action="@{/logout}" style="display:inline">
+            <button type="submit">Logout</button>
+        </form>
     </div>
-    <button type="submit">Start</button>
- </form>
+    <form method="post" th:action="@{/start}">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="Ecommerce support" required />
+        <div class="agents">
+            <div class="agent" th:each="a: ${agents}">
+                <label>
+                    <input type="checkbox" name="agentIds" th:value="${a.id}" />
+                    <span th:text="${a.displayName} + ' (' + ${a.kind} + ')'">Agent</span>
+                </label>
+            </div>
+        </div>
+        <button type="submit">Start</button>
+     </form>
+  </div>
+  <div>
+    <h2 th:text="${allConversations} != null ? 'All Conversations' : 'My Conversations'">Conversations</h2>
+    <table th:if="${myConversations} != null or ${allConversations} != null">
+      <thead><tr><th>Title</th><th>Created</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr th:each="c: ${allConversations != null ? allConversations : myConversations}">
+          <td th:text="${c.title}">title</td>
+          <td th:text="${c.createdAt}">time</td>
+          <td><a th:href="@{'/chat/' + ${c.id}}">Open</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <p th:if="${myConversations} == null and ${allConversations} == null">Hãy đăng nhập để xem danh sách hội thoại của bạn.</p>
+  </div>
+</div>
+</div>
 </body>
 </html>
 

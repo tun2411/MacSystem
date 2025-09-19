@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface ConversationParticipantRepository extends JpaRepository<ConversationParticipant, Long> {
     List<ConversationParticipant> findByConversationIdOrderByJoinedAtAsc(String conversationId);
+    List<ConversationParticipant> findByConversationIdAndParticipantType(String conversationId, String participantType);
+    void deleteByConversationIdAndParticipantType(String conversationId, String participantType);
 }
 
 

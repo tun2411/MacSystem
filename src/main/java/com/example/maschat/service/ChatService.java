@@ -56,6 +56,23 @@ public class ChatService {
         return c;
     }
 
+    @Transactional
+    public void updateConversationAgents(String conversationId, List<String> agentIds) {
+        // Remove existing agent participants using bulk delete
+        participantRepository.deleteByConversationIdAndParticipantType(conversationId, "agent");
+        
+        // Add the provided agents
+        for (String agentId : agentIds) {
+            ConversationParticipant p = new ConversationParticipant();
+            p.setConversationId(conversationId);
+            p.setParticipantType("agent");
+            p.setAgentId(agentId);
+            p.setRoleKey("agent");
+            p.setJoinedAt(Instant.now());
+            participantRepository.save(p);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<Message> getMessages(String conversationId) {
         return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
@@ -95,6 +112,32 @@ public class ChatService {
                 bot.setCreatedAt(Instant.now());
                 messageRepository.save(bot);
             });
+        }
+
+        // Ensure StaffAgent participates and posts suggestions
+        List<Agent> staffAgents = agentRepository.findByKind("StaffAgent");
+        if (!staffAgents.isEmpty()) {
+            Agent sa = staffAgents.get(0);
+            boolean alreadyParticipant = ps.stream().anyMatch(p -> "agent".equals(p.getParticipantType()) && sa.getId().equals(p.getAgentId()));
+            if (!alreadyParticipant) {
+                ConversationParticipant p = new ConversationParticipant();
+                p.setConversationId(conversationId);
+                p.setParticipantType("agent");
+                p.setAgentId(sa.getId());
+                p.setRoleKey("agent");
+                p.setJoinedAt(Instant.now());
+                participantRepository.save(p);
+            }
+            Message hint = new Message();
+            hint.setId(Ids.newUuid());
+            hint.setConversationId(conversationId);
+            hint.setSenderType("agent");
+            hint.setSenderAgentId(sa.getId());
+            hint.setRoleKey("agent");
+            hint.setContent("🛠️ Staff Agent gợi ý: kiểm tra trạng thái đơn hàng gần nhất, đề xuất xin lỗi và mã giảm giá 10% cho lần mua sau.");
+            hint.setContentType("text/markdown");
+            hint.setCreatedAt(Instant.now());
+            messageRepository.save(hint);
         }
     }
 

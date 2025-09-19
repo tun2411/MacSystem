@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface AgentRepository extends JpaRepository<Agent, String> {
     Optional<Agent> findByHandle(String handle);
     List<Agent> findByActiveTrue();
+    List<Agent> findByKind(String kind);
 }
 
 
