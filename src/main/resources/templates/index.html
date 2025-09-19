@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Start Conversation</title>
+    <style>
+        body{font-family:Arial, sans-serif;padding:24px}
+        .agents{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0}
+        .agent{border:1px solid #ddd;padding:8px 12px;border-radius:8px}
+        button{padding:8px 12px}
+        input[type=text]{padding:8px;width:320px}
+    </style>
+    </head>
+<body>
+<h2>New Conversation</h2>
+<form method="post" th:action="@{/start}">
+    <label>Title</label>
+    <input type="text" name="title" placeholder="Ecommerce support" required />
+    <div class="agents">
+        <div class="agent" th:each="a: ${agents}">
+            <label>
+                <input type="checkbox" name="agentIds" th:value="${a.id}" />
+                <span th:text="${a.displayName} + ' (' + ${a.kind} + ')'">Agent</span>
+            </label>
+        </div>
+    </div>
+    <button type="submit">Start</button>
+ </form>
+</body>
+</html>
+
+

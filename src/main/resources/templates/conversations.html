@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Conversations</title>
+    <style>
+        body{font-family:Arial, sans-serif;padding:24px}
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #eee;padding:8px}
+        th{background:#fafafa;text-align:left}
+        a.btn{display:inline-block;padding:6px 10px;border:1px solid #1890ff;color:#1890ff;border-radius:6px;text-decoration:none}
+        .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    </style>
+</head>
+<body>
+<div class="top">
+    <h2>Conversations</h2>
+    <div>
+        <a class="btn" th:href="@{/}">New conversation</a>
+    </div>
+ </div>
+<table>
+    <thead>
+        <tr><th>Title</th><th>Status</th><th>Created At</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+        <tr th:each="c: ${conversations}">
+            <td th:text="${c.title}">Title</td>
+            <td th:text="${c.status}">active</td>
+            <td th:text="${c.createdAt}">time</td>
+            <td><a th:href="@{'/chat/' + ${c.id}}">Open</a></td>
+        </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
