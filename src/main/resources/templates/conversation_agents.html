@@ -1,0 +1,86 @@
+  <!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Manage Agents</title>
+    <style>
+        body{font-family:Arial, sans-serif;padding:24px}
+        .box{max-width:680px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+        .row{margin:12px 0}
+        label{display:block;margin-bottom:6px}
+        .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
+        .toolbar .left{display:flex;gap:8px;align-items:center}
+        input[type=text]{padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;min-width:260px}
+        select{width:100%;min-height:260px;padding:8px}
+        small.muted{color:#6b7280}
+        .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+        a.btn,button{padding:8px 12px;border:1px solid #2563eb;border-radius:8px;background:#dbeafe;color:#2563eb;text-decoration:none}
+        .btn-ghost{border-color:#e5e7eb;background:#fff;color:#374151}
+    </style>
+    </head>
+<body>
+<div class="box">
+    <h2>Chỉnh sửa Agent tham gia</h2>
+    <form th:action="@{'/chat/' + ${conversationId} + '/agents'}" method="post">
+        <div class="row">
+            <label for="agentIds">Chọn các agent tham gia</label>
+            <div class="toolbar">
+                <div class="left">
+                    <input id="search" type="text" placeholder="Tìm agent theo tên/loại..." autocomplete="off" />
+                    <small class="muted" id="counter">0 đã chọn</small>
+                </div>
+                <div class="right">
+                    <button type="button" class="btn-ghost" id="selectAll" title="Chọn tất cả">Chọn tất cả</button>
+                    <button type="button" class="btn-ghost" id="clearAll" title="Bỏ chọn">Bỏ chọn</button>
+                </div>
+            </div>
+            <select id="agentIds" name="agentIds" multiple>
+                <option th:each="a: ${allAgents}"
+                        th:value="${a.id}"
+                        th:selected="${currentAgentIds != null and currentAgentIds.contains(a.id)}"
+                        th:text="${a.displayName} + ' (' + ${a.kind} + ')'">Agent</option>
+            </select>
+        </div>
+        <div class="actions">
+            <a class="btn btn-ghost" th:href="@{'/chat/' + ${conversationId}}">Hủy</a>
+            <button type="submit">Xác nhận</button>
+        </div>
+    </form>
+</div>
+<script>
+  (function(){
+    var input = document.getElementById('search');
+    var select = document.getElementById('agentIds');
+    var counter = document.getElementById('counter');
+    var btnAll = document.getElementById('selectAll');
+    var btnClear = document.getElementById('clearAll');
+
+    function updateCounter(){
+      var count = 0;
+      for (var i=0;i<select.options.length;i++){ if (select.options[i].selected) count++; }
+      counter.textContent = count + ' đã chọn';
+    }
+
+    function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
+    function applyFilter(){
+      var q = normalize(input.value);
+      for (var i=0;i<select.options.length;i++){
+        var opt = select.options[i];
+        var text = normalize(opt.text || opt.innerText);
+        var show = !q || text.indexOf(q) > -1;
+        opt.hidden = !show;
+      }
+    }
+
+    if (input){ input.addEventListener('input', applyFilter); }
+    if (select){ select.addEventListener('change', updateCounter); }
+    if (btnAll){ btnAll.addEventListener('click', function(){ for (var i=0;i<select.options.length;i++){ if (!select.options[i].hidden) select.options[i].selected = true; } updateCounter(); }); }
+    if (btnClear){ btnClear.addEventListener('click', function(){ for (var i=0;i<select.options.length;i++){ select.options[i].selected = false; } updateCounter(); }); }
+
+    // init
+    applyFilter();
+    updateCounter();
+  })();
+</script>
+</body>
+</html>
