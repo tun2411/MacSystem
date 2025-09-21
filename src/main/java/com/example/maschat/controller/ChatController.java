@@ -73,10 +73,43 @@ public class ChatController {
     }
 
     @PostMapping("/chat/{conversationId}/send")
-    public String send(@PathVariable String conversationId, @RequestParam String content, jakarta.servlet.http.HttpSession session) {
+    public String send(@PathVariable String conversationId, 
+                      @RequestParam(required = false) String content, 
+                      jakarta.servlet.http.HttpServletRequest request,
+                      jakarta.servlet.http.HttpSession session) {
         String uid = (String) session.getAttribute("uid");
         if (uid == null) return "redirect:/login";
-        chatService.sendUserMessage(conversationId, uid, content);
+        
+        // Debug logging - check all parameters
+        System.out.println("DEBUG: Received content parameter: " + content);
+        System.out.println("DEBUG: Content is null: " + (content == null));
+        System.out.println("DEBUG: Content length: " + (content != null ? content.length() : "null"));
+        System.out.println("DEBUG: Content trimmed: " + (content != null ? content.trim() : "null"));
+        System.out.println("DEBUG: Content trimmed length: " + (content != null ? content.trim().length() : "null"));
+        
+        // Debug all request parameters
+        System.out.println("DEBUG: All request parameters:");
+        request.getParameterMap().forEach((key, values) -> {
+            System.out.println("  " + key + " = " + java.util.Arrays.toString(values));
+        });
+        
+        // Debug request info
+        System.out.println("DEBUG: Request method: " + request.getMethod());
+        System.out.println("DEBUG: Content type: " + request.getContentType());
+        System.out.println("DEBUG: Request URI: " + request.getRequestURI());
+        
+        // Try to get content from different sources
+        String contentFromRequest = request.getParameter("content");
+        System.out.println("DEBUG: Content from request.getParameter: " + contentFromRequest);
+        
+        // Check if content is empty or null
+        if (content == null || content.trim().isEmpty()) {
+            System.out.println("DEBUG: Content validation failed - redirecting with error");
+            return "redirect:/chat/" + conversationId + "?error=empty_message";
+        }
+        
+        System.out.println("DEBUG: Content validation passed - processing message");
+        chatService.sendUserMessage(conversationId, uid, content.trim());
         return "redirect:/chat/" + conversationId;
     }
 
@@ -84,20 +117,42 @@ public class ChatController {
     public String manageAgents(@PathVariable String conversationId, Model model, jakarta.servlet.http.HttpSession session) {
         String uid = (String) session.getAttribute("uid");
         if (uid == null) return "redirect:/login";
+        
+        // Check if user is staff
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff == null || !isStaff) {
+            model.addAttribute("error", "Chỉ có staff mới được chỉnh sửa agent tham gia");
+            return "redirect:/chat/" + conversationId;
+        }
+        
         model.addAttribute("conversationId", conversationId);
         model.addAttribute("allAgents", agentRepository.findByActiveTrue());
+        
+        // Find current agent (excluding supervisor)
         List<ConversationParticipant> currentAgents = participantRepository.findByConversationIdAndParticipantType(conversationId, "agent");
-        model.addAttribute("currentAgentIds", currentAgents.stream().map(ConversationParticipant::getAgentId).toList());
+        String currentAgentId = currentAgents.stream()
+            .filter(p -> !"supervisor".equals(p.getRoleKey()))
+            .map(ConversationParticipant::getAgentId)
+            .findFirst()
+            .orElse(null);
+        model.addAttribute("currentAgentId", currentAgentId);
         return "conversation_agents";
     }
 
     @PostMapping("/chat/{conversationId}/agents")
     public String updateAgents(@PathVariable String conversationId,
-                               @RequestParam(required = false, name = "agentIds") List<String> agentIds,
+                               @RequestParam(required = false, name = "agentId") String agentId,
                                jakarta.servlet.http.HttpSession session) {
         String uid = (String) session.getAttribute("uid");
         if (uid == null) return "redirect:/login";
-        chatService.updateConversationAgents(conversationId, agentIds == null ? List.of() : agentIds);
+        
+        // Check if user is staff
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff == null || !isStaff) {
+            return "redirect:/chat/" + conversationId;
+        }
+        
+        chatService.updateConversationAgents(conversationId, agentId);
         return "redirect:/chat/" + conversationId;
     }
 }

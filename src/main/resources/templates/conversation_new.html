@@ -5,29 +5,36 @@
     <title>New Conversation</title>
     <style>
         body{font-family:Arial, sans-serif;padding:24px}
-        .agents{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0}
-        .agent{border:1px solid #ddd;padding:8px 12px;border-radius:8px}
-        button{padding:8px 12px}
-        input[type=text]{padding:8px;width:320px}
-        a{color:#1890ff;text-decoration:none}
+        .box{max-width:500px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:24px}
+        .form-group{margin:16px 0}
+        label{display:block;margin-bottom:6px;font-weight:bold}
+        input[type=text]{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:16px}
+        button{padding:10px 20px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+        button:hover{background:#1d4ed8}
+        a{color:#2563eb;text-decoration:none}
+        .info{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin:16px 0;color:#0369a1}
+        .back{margin-bottom:16px}
     </style>
 </head>
 <body>
-<p><a th:href="@{/conversations}">◀ All Conversations</a></p>
-<h2>Create Conversation</h2>
-<form method="post" th:action="@{/start}">
-    <label>Title</label>
-    <input type="text" name="title" placeholder="Ecommerce support" required />
-    <div class="agents">
-        <div class="agent" th:each="a: ${agents}">
-            <label>
-                <input type="checkbox" name="agentIds" th:value="${a.id}" />
-                <span th:text="${a.displayName} + ' (' + ${a.kind} + ')'">Agent</span>
-            </label>
-        </div>
+<div class="box">
+    <div class="back">
+        <a th:href="@{/conversations}">◀ All Conversations</a>
     </div>
-    <button type="submit">Start</button>
- </form>
+    <h2>Create New Conversation</h2>
+    
+    <div class="info">
+        <strong>Supervisor Agent</strong> sẽ tự động tham gia cuộc trò chuyện và chào mừng bạn.
+    </div>
+    
+    <form method="post" th:action="@{/start}">
+        <div class="form-group">
+            <label for="title">Tiêu đề cuộc trò chuyện</label>
+            <input type="text" id="title" name="title" placeholder="Ví dụ: Hỗ trợ đơn hàng #12345" required />
+        </div>
+        <button type="submit">Tạo cuộc trò chuyện</button>
+    </form>
+</div>
 </body>
 </html>
 

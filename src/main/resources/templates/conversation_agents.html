@@ -1,85 +1,109 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
-    <title>Manage Agents</title>
+    <title>Manage Agent</title>
     <style>
         body{font-family:Arial, sans-serif;padding:24px}
-        .box{max-width:680px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
-        .row{margin:12px 0}
-        label{display:block;margin-bottom:6px}
-        .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
-        .toolbar .left{display:flex;gap:8px;align-items:center}
-        input[type=text]{padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;min-width:260px}
-        select{width:100%;min-height:260px;padding:8px}
-        small.muted{color:#6b7280}
-        .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-        a.btn,button{padding:8px 12px;border:1px solid #2563eb;border-radius:8px;background:#dbeafe;color:#2563eb;text-decoration:none}
+        .box{max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:24px}
+        .form-group{margin:16px 0}
+        label{display:block;margin-bottom:8px;font-weight:bold}
+        .agent-list{max-height:300px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px}
+        .agent-item{display:flex;align-items:center;padding:8px;border-radius:6px;margin:4px 0;cursor:pointer;transition:background-color 0.15s}
+        .agent-item:hover{background:#f9fafb}
+        .agent-item.selected{background:#dbeafe;border:1px solid #2563eb}
+        .agent-item input[type=radio]{margin-right:8px}
+        .agent-info{flex:1}
+        .agent-name{font-weight:bold;color:#1f2937}
+        .agent-kind{font-size:12px;color:#6b7280}
+        .search{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:12px}
+        .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+        a.btn,button{padding:8px 16px;border:1px solid #2563eb;border-radius:8px;background:#dbeafe;color:#2563eb;text-decoration:none;cursor:pointer}
         .btn-ghost{border-color:#e5e7eb;background:#fff;color:#374151}
+        .info{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-bottom:16px;color:#0369a1}
     </style>
     </head>
 <body>
 <div class="box">
-    <h2>Chỉnh sửa Agent tham gia</h2>
+    <h2>Chọn Agent tham gia</h2>
+    
+    <div class="info">
+        <strong>Lưu ý:</strong> Chỉ có thể chọn 1 agent tại một thời điểm. Supervisor sẽ luôn tham gia.
+    </div>
+    
     <form th:action="@{'/chat/' + ${conversationId} + '/agents'}" method="post">
-        <div class="row">
-            <label for="agentIds">Chọn các agent tham gia</label>
-            <div class="toolbar">
-                <div class="left">
-                    <input id="search" type="text" placeholder="Tìm agent theo tên/loại..." autocomplete="off" />
-                    <small class="muted" id="counter">0 đã chọn</small>
-                </div>
-                <div class="right">
-                    <button type="button" class="btn-ghost" id="selectAll" title="Chọn tất cả">Chọn tất cả</button>
-                    <button type="button" class="btn-ghost" id="clearAll" title="Bỏ chọn">Bỏ chọn</button>
+        <div class="form-group">
+            <label>Tìm kiếm agent</label>
+            <input id="search" type="text" class="search" placeholder="Tìm theo tên hoặc loại agent..." autocomplete="off" />
+        </div>
+        
+        <div class="form-group">
+            <label>Chọn agent tham gia</label>
+            <div class="agent-list" id="agentList">
+                <div class="agent-item" th:each="a: ${allAgents}" 
+                     th:class="${'agent-item' + (a.id == currentAgentId ? ' selected' : '')}"
+                     th:attr="data-name=${a.displayName},data-kind=${a.kind}">
+                    <input type="radio" name="agentId" th:value="${a.id}" 
+                           th:checked="${a.id == currentAgentId}" />
+                    <div class="agent-info">
+                        <div class="agent-name" th:text="${a.displayName}">Agent Name</div>
+                        <div class="agent-kind" th:text="${a.kind}">Agent Kind</div>
+                    </div>
                 </div>
             </div>
-            <select id="agentIds" name="agentIds" multiple>
-                <option th:each="a: ${allAgents}"
-                        th:value="${a.id}"
-                        th:selected="${currentAgentIds != null and currentAgentIds.contains(a.id)}"
-                        th:text="${a.displayName} + ' (' + ${a.kind} + ')'">Agent</option>
-            </select>
         </div>
+        
         <div class="actions">
             <a class="btn btn-ghost" th:href="@{'/chat/' + ${conversationId}}">Hủy</a>
             <button type="submit">Xác nhận</button>
         </div>
     </form>
 </div>
+
 <script>
   (function(){
-    var input = document.getElementById('search');
-    var select = document.getElementById('agentIds');
-    var counter = document.getElementById('counter');
-    var btnAll = document.getElementById('selectAll');
-    var btnClear = document.getElementById('clearAll');
-
-    function updateCounter(){
-      var count = 0;
-      for (var i=0;i<select.options.length;i++){ if (select.options[i].selected) count++; }
-      counter.textContent = count + ' đã chọn';
-    }
+    var searchInput = document.getElementById('search');
+    var agentList = document.getElementById('agentList');
+    var agentItems = agentList.querySelectorAll('.agent-item');
 
     function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
+    
     function applyFilter(){
-      var q = normalize(input.value);
-      for (var i=0;i<select.options.length;i++){
-        var opt = select.options[i];
-        var text = normalize(opt.text || opt.innerText);
-        var show = !q || text.indexOf(q) > -1;
-        opt.hidden = !show;
-      }
+      var query = normalize(searchInput.value);
+      agentItems.forEach(function(item){
+        var name = normalize(item.getAttribute('data-name') || '');
+        var kind = normalize(item.getAttribute('data-kind') || '');
+        var show = !query || name.indexOf(query) > -1 || kind.indexOf(query) > -1;
+        item.style.display = show ? 'flex' : 'none';
+      });
     }
 
-    if (input){ input.addEventListener('input', applyFilter); }
-    if (select){ select.addEventListener('change', updateCounter); }
-    if (btnAll){ btnAll.addEventListener('click', function(){ for (var i=0;i<select.options.length;i++){ if (!select.options[i].hidden) select.options[i].selected = true; } updateCounter(); }); }
-    if (btnClear){ btnClear.addEventListener('click', function(){ for (var i=0;i<select.options.length;i++){ select.options[i].selected = false; } updateCounter(); }); }
+    function selectAgent(item){
+      // Remove selected class from all items
+      agentItems.forEach(function(i){ i.classList.remove('selected'); });
+      // Add selected class to clicked item
+      item.classList.add('selected');
+      // Check the radio button
+      var radio = item.querySelector('input[type=radio]');
+      if (radio) radio.checked = true;
+    }
 
-    // init
+    // Add click handlers to agent items
+    agentItems.forEach(function(item){
+      item.addEventListener('click', function(e){
+        if (e.target.type !== 'radio') {
+          selectAgent(item);
+        }
+      });
+    });
+
+    // Add search functionality
+    if (searchInput){
+      searchInput.addEventListener('input', applyFilter);
+    }
+
+    // Initialize
     applyFilter();
-    updateCounter();
   })();
 </script>
 </body>

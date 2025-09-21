@@ -27,12 +27,17 @@
 <body>
 <header>
     <a th:href="@{/conversations}">◀ Back</a>
-    <span class="header-actions">
+    <span class="header-actions" th:if="${session.isStaff}">
         <a th:href="@{'/chat/' + ${conversationId} + '/agents'}">Manage agents</a>
     </span>
 </header>
 <main>
     <div id="messages" class="messages">
+        <!-- Error message display -->
+        <div th:if="${param.error}" class="error-message" style="background: #ffebee; border: 1px solid #f44336; color: #c62828; padding: 8px; margin: 8px 0; border-radius: 4px;">
+            <span th:if="${param.error[0] == 'empty_message'}">Please enter a message before sending.</span>
+        </div>
+        
         <div th:each="m,stat: ${messages}"
              th:with="mine=${m.senderType == 'user' and m.senderUserId == currentUserId}"
              th:class="${'row ' + (mine ? 'right' : 'left')}">
@@ -43,12 +48,86 @@
             </div>
         </div>
     </div>
-    <form th:action="@{'/chat/' + ${conversationId} + '/send'}" method="post">
-        <textarea name="content" rows="2" placeholder="Type a message..." required></textarea>
-        <button type="submit">Send</button>
+    <form th:action="@{'/chat/' + ${conversationId} + '/send'}" method="post" id="messageForm">
+        <textarea name="content" rows="2" placeholder="Type a message..." id="messageInput" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" required></textarea>
+        <button type="submit" id="sendButton" style="margin-top: 8px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Send</button>
+        <button type="button" onclick="debugForm()" style="margin-left: 8px; margin-top: 8px; padding: 8px 16px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Debug</button>
+        <button type="button" onclick="testInput()" style="margin-left: 8px; margin-top: 8px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Test Input</button>
     </form>
 </main>
 <script>
+  // Global function for form validation - simplified
+  function validateAndSubmit(form) {
+    var messageInput = form.querySelector('textarea[name="content"]');
+    console.log('validateAndSubmit called');
+    
+    if (!messageInput) {
+      console.log('Message input not found in form');
+      return false;
+    }
+    
+    var messageValue = messageInput.value;
+    console.log('Message value:', JSON.stringify(messageValue));
+    console.log('Message length:', messageValue ? messageValue.length : 0);
+    
+    // Only check if completely empty (no spaces or content)
+    if (!messageValue || messageValue.length === 0) {
+      console.log('Message is completely empty');
+      alert('Please enter a message before sending.');
+      return false;
+    }
+    
+    console.log('Validation passed, allowing submit');
+    return true;
+  }
+  
+  // Debug function
+  function debugForm() {
+    var form = document.getElementById('messageForm');
+    var messageInput = document.getElementById('messageInput');
+    
+    console.log('=== DEBUG FORM ===');
+    console.log('Form:', form);
+    console.log('Message input:', messageInput);
+    console.log('Message input type:', messageInput ? messageInput.type : 'null');
+    console.log('Message input name:', messageInput ? messageInput.name : 'null');
+    console.log('Message input id:', messageInput ? messageInput.id : 'null');
+    console.log('Message value:', messageInput ? messageInput.value : 'null');
+    console.log('Message value type:', typeof (messageInput ? messageInput.value : 'null'));
+    console.log('Message length:', messageInput ? messageInput.value.length : 'null');
+    console.log('Message trimmed:', messageInput ? messageInput.value.trim() : 'null');
+    console.log('Message trimmed length:', messageInput ? messageInput.value.trim().length : 'null');
+    console.log('Form action:', form ? form.action : 'null');
+    console.log('Form method:', form ? form.method : 'null');
+    
+    // Check if textarea is focused
+    console.log('Is textarea focused:', document.activeElement === messageInput);
+    console.log('Active element:', document.activeElement);
+    
+    // Try to get value using different methods
+    if (messageInput) {
+      console.log('Value via .value:', messageInput.value);
+      console.log('Value via getAttribute:', messageInput.getAttribute('value'));
+      console.log('Value via innerHTML:', messageInput.innerHTML);
+      console.log('Value via textContent:', messageInput.textContent);
+    }
+    
+    alert('Check console for debug info. Message: "' + (messageInput ? messageInput.value : 'null') + '"');
+  }
+  
+  // Test input function
+  function testInput() {
+    var messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+      messageInput.value = 'Test message from button';
+      messageInput.focus();
+      console.log('Test message set:', messageInput.value);
+      alert('Test message set: "' + messageInput.value + '"');
+    } else {
+      alert('Message input not found!');
+    }
+  }
+
   (function(){
     function scrollToLatest(){
       var last = document.getElementById('last');
@@ -59,10 +138,87 @@
       var box = document.getElementById('messages');
       if (box) { box.scrollTop = box.scrollHeight; }
     }
+    
+    function showLoadingState() {
+      var sendButton = document.getElementById('sendButton');
+      var messageInput = document.getElementById('messageInput');
+      if (sendButton) {
+        sendButton.disabled = true;
+        sendButton.textContent = 'Sending...';
+      }
+      if (messageInput) {
+        messageInput.disabled = true;
+      }
+    }
+    
+    function hideLoadingState() {
+      var sendButton = document.getElementById('sendButton');
+      var messageInput = document.getElementById('messageInput');
+      if (sendButton) {
+        sendButton.disabled = false;
+        sendButton.textContent = 'Send';
+      }
+      if (messageInput) {
+        messageInput.disabled = false;
+        messageInput.value = '';
+        messageInput.focus();
+      }
+    }
+    
+    // Handle form submission - no validation, just loading state
+    var messageForm = document.getElementById('messageForm');
+    if (messageForm) {
+      messageForm.addEventListener('submit', function(e) {
+        console.log('Form submit event listener triggered');
+        var messageInput = document.getElementById('messageInput');
+        console.log('Message value on submit:', messageInput ? messageInput.value : 'null');
+        
+        // Log form data
+        var formData = new FormData(messageForm);
+        console.log('Form data:');
+        for (var pair of formData.entries()) {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+        
+        // Force set the content value before submit
+        if (messageInput && messageInput.value) {
+          console.log('Forcing content value before submit');
+          // Create a hidden input to ensure the value is sent
+          var hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.name = 'content';
+          hiddenInput.value = messageInput.value;
+          messageForm.appendChild(hiddenInput);
+        }
+        
+        // Always show loading state when form is submitted
+        showLoadingState();
+      });
+    }
+    
+    // Auto-hide error messages
+    function hideErrorMessages() {
+      var errorMessages = document.querySelectorAll('.error-message');
+      errorMessages.forEach(function(errorMsg) {
+        setTimeout(function() {
+          errorMsg.style.opacity = '0';
+          setTimeout(function() {
+            errorMsg.remove();
+          }, 300);
+        }, 3000); // Hide after 3 seconds
+      });
+    }
+    
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', scrollToLatest);
+      document.addEventListener('DOMContentLoaded', function() {
+        scrollToLatest();
+        hideLoadingState();
+        hideErrorMessages();
+      });
     } else {
       scrollToLatest();
+      hideLoadingState();
+      hideErrorMessages();
     }
   })();
 </script>
