@@ -69,6 +69,11 @@ public class ChatController {
         String uid = (String) session.getAttribute("uid");
         if (uid == null) return "redirect:/login";
         model.addAttribute("currentUserId", uid);
+        
+        // Add staff status to model
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        model.addAttribute("isStaff", isStaff != null ? isStaff : false);
+        
         return "chat";
     }
 
@@ -109,7 +114,17 @@ public class ChatController {
         }
         
         System.out.println("DEBUG: Content validation passed - processing message");
-        chatService.sendUserMessage(conversationId, uid, content.trim());
+        
+        // Check if user is staff
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff != null && isStaff) {
+            // Staff message - no agent response
+            chatService.sendStaffMessage(conversationId, uid, content.trim());
+        } else {
+            // Regular user message - with agent response
+            chatService.sendUserMessage(conversationId, uid, content.trim());
+        }
+        
         return "redirect:/chat/" + conversationId;
     }
 

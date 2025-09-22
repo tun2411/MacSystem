@@ -172,6 +172,33 @@ public class ChatService {
         return m;
     }
 
+    @Transactional
+    public Message sendStaffMessage(String conversationId, String userId, String content) {
+        Instant staffMessageTime = Instant.now();
+        long staffMessageOrder = messageCounter.incrementAndGet();
+        
+        System.out.println("DEBUG: Staff message time: " + staffMessageTime + ", order: " + staffMessageOrder);
+        
+        Message m = new Message();
+        m.setId(Ids.newUuid());
+        m.setConversationId(conversationId);
+        m.setSenderType("staff");
+        m.setSenderUserId(userId);
+        m.setRoleKey("staff");
+        m.setContent(content);
+        m.setContentType("text/markdown");
+        m.setCreatedAt(staffMessageTime);
+        messageRepository.save(m);
+        
+        // Force flush to ensure staff message is saved
+        entityManager.flush();
+        
+        // Staff messages don't trigger agent responses
+        System.out.println("DEBUG: Staff message sent - no agent response triggered");
+        
+        return m;
+    }
+
     private void sendAgentResponseWithRetry(String conversationId, Instant responseTime) {
         int maxRetries = 3;
         int retryCount = 0;

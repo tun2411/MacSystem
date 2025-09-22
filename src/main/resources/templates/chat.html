@@ -12,6 +12,8 @@
         .user{background:#e6f7ff;border:1px solid #91d5ff}
         .agent{background:#fffbe6;border:1px solid #ffe58f}
         .staff{background:#f6ffed;border:1px solid #b7eb8f}
+        .staff.right{background:#e6f7ff;border:1px solid #91d5ff}
+        .agent.right{background:#e6f7ff;border:1px solid #91d5ff}
         .left{align-self:flex-start;text-align:left}
         .right{align-self:flex-end;text-align:left}
         .row{display:flex}
@@ -27,6 +29,7 @@
 <body>
 <header>
     <a th:href="@{/conversations}">◀ Back</a>
+    <span th:if="${session.isStaff}" style="color: #28a745; font-weight: bold; margin-left: 10px;">👨‍💼 Staff View</span>
     <span class="header-actions" th:if="${session.isStaff}">
         <a th:href="@{'/chat/' + ${conversationId} + '/agents'}">Manage agents</a>
     </span>
@@ -39,9 +42,11 @@
         </div>
         
         <div th:each="m,stat: ${messages}"
-             th:with="mine=${m.senderType == 'user' and m.senderUserId == currentUserId}"
-             th:class="${'row ' + (mine ? 'right' : 'left')}">
-            <div th:class="${'msg ' + (m.senderType) + ' ' + (mine ? 'right' : 'left')}"
+             th:with="isStaff=${session.isStaff != null and session.isStaff}, 
+                      isCurrentUser=${m.senderType == 'user' and m.senderUserId == currentUserId},
+                      shouldShowRight=${isStaff and (m.senderType == 'agent' or m.senderType == 'staff') or (!isStaff and isCurrentUser)}"
+             th:class="${'row ' + (shouldShowRight ? 'right' : 'left')}">
+            <div th:class="${'msg ' + (m.senderType) + ' ' + (shouldShowRight ? 'right' : 'left')}"
                  th:id="${stat.last} ? 'last' : null">
                 <div class="meta" th:text="${m.roleKey} + ' • ' + ${m.senderType}"></div>
                 <div th:utext="${m.content}"></div>
