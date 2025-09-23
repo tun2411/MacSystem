@@ -129,7 +129,8 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public List<Message> getMessages(String conversationId) {
-        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+        // Use deterministic ordering: by createdAt, then sender priority (user, staff, agent)
+        return messageRepository.findOrderedForConversation(conversationId);
     }
 
     @Transactional
