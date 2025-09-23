@@ -4,8 +4,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.Instant;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "agents")
 public class Agent {
@@ -31,20 +36,6 @@ public class Agent {
     @Column(name = "created_at")
     private Instant createdAt;
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getHandle() { return handle; }
-    public void setHandle(String handle) { this.handle = handle; }
-    public String getDisplayName() { return displayName; }
-    public void setDisplayName(String displayName) { this.displayName = displayName; }
-    public String getKind() { return kind; }
-    public void setKind(String kind) { this.kind = kind; }
-    public String getMetadata() { return metadata; }
-    public void setMetadata(String metadata) { this.metadata = metadata; }
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }
 
 

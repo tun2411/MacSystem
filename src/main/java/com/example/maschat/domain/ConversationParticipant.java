@@ -1,8 +1,13 @@
 package com.example.maschat.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.Instant;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "conversation_participants")
 public class ConversationParticipant {
@@ -32,22 +37,6 @@ public class ConversationParticipant {
     @Column(name = "left_at")
     private Instant leftAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getConversationId() { return conversationId; }
-    public void setConversationId(String conversationId) { this.conversationId = conversationId; }
-    public String getParticipantType() { return participantType; }
-    public void setParticipantType(String participantType) { this.participantType = participantType; }
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-    public String getAgentId() { return agentId; }
-    public void setAgentId(String agentId) { this.agentId = agentId; }
-    public String getRoleKey() { return roleKey; }
-    public void setRoleKey(String roleKey) { this.roleKey = roleKey; }
-    public Instant getJoinedAt() { return joinedAt; }
-    public void setJoinedAt(Instant joinedAt) { this.joinedAt = joinedAt; }
-    public Instant getLeftAt() { return leftAt; }
-    public void setLeftAt(Instant leftAt) { this.leftAt = leftAt; }
 }
 
 

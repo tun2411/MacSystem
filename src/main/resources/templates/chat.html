@@ -32,6 +32,7 @@
         .row.left .msg{border-top-left-radius:8px;border-top-right-radius:16px;border-bottom-right-radius:16px;border-bottom-left-radius:4px}
         .row.right .msg{border-top-left-radius:16px;border-top-right-radius:8px;border-bottom-right-radius:4px;border-bottom-left-radius:16px}
         .meta{font-size:12px;color:#6b7280;margin-bottom:6px;display:flex;gap:8px;align-items:center}
+        .edited{font-style:italic;color:#9ca3af}
         .time{font-variant-numeric:tabular-nums;color:#9ca3af}
         .msg .content{font-size:14px;line-height:1.45;white-space:pre-wrap}
         .user{background:#e8f3ff;border:1px solid #cde3ff}
@@ -77,13 +78,16 @@
         <div th:each="m,stat: ${messages}"
              th:with="isStaff=${session.isStaff != null and session.isStaff}, 
                       isCurrentUser=${m.senderType == 'user' and m.senderUserId == currentUserId},
+                      canEdit=${(m.senderType == 'user' and m.senderUserId == currentUserId) or (isStaff and m.senderType == 'staff' and m.senderUserId == currentUserId)},
                       shouldShowRight=${isStaff and (m.senderType == 'agent' or m.senderType == 'staff') or (!isStaff and isCurrentUser)}"
              th:class="${'row ' + (shouldShowRight ? 'right' : 'left')}">
             <div th:class="${'msg ' + (m.senderType) + ' ' + (shouldShowRight ? 'right' : 'left')}"
-                 th:id="${stat.last} ? 'last' : null">
+                 th:id="${stat.last} ? 'last' : null"
+                 th:attr="data-id=${m.id},data-role=${m.roleKey},data-sender-type=${m.senderType},data-sender-user-id=${m.senderUserId},data-editable=${canEdit}">
                 <div class="meta">
                     <span th:text="${m.roleKey} + ' • ' + ${m.senderType}"></span>
                     <span class="time" th:text="${#temporals.format(m.createdAt, 'HH:mm')} "></span>
+                    <span class="edited" th:if="${m.editedAt != null}">(edited)</span>
                 </div>
                 <div class="content" th:utext="${m.content}"></div>
             </div>
@@ -153,9 +157,29 @@
         row.className = 'row ' + (shouldShowRight ? 'right' : 'left');
         var bubble = document.createElement('div');
         bubble.className = 'msg ' + msg.senderType + ' ' + (shouldShowRight ? 'right' : 'left');
+        bubble.setAttribute('data-id', msg.id || '');
+        bubble.setAttribute('data-role', msg.roleKey || '');
+        bubble.setAttribute('data-sender-type', msg.senderType || '');
+        bubble.setAttribute('data-sender-user-id', msg.senderUserId || '');
+        var isStaff = (box.getAttribute('data-is-staff') === 'true' || box.getAttribute('data-is-staff') === 'True');
+        var currentUserId = box.getAttribute('data-current-user-id');
+        var canEdit = (msg.senderType === 'user' && msg.senderUserId === currentUserId) ||
+                      (isStaff && (msg.senderType === 'staff' && msg.senderUserId === currentUserId));
+        bubble.setAttribute('data-editable', canEdit);
         var meta = document.createElement('div');
         meta.className = 'meta';
-        meta.textContent = (msg.roleKey || '') + ' • ' + (msg.senderType || '');
+        var metaText = document.createElement('span');
+        metaText.textContent = (msg.roleKey || '') + ' • ' + (msg.senderType || '');
+        var timeSpan = document.createElement('span');
+        timeSpan.className = 'time';
+        if (msg.createdAt) {
+          try { timeSpan.textContent = new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); } catch(_) {}
+        }
+        var editedSpan = document.createElement('span');
+        if (msg.editedAt) { editedSpan.className = 'edited'; editedSpan.textContent = '(edited)'; }
+        meta.appendChild(metaText);
+        meta.appendChild(timeSpan);
+        if (msg.editedAt) meta.appendChild(editedSpan);
         var content = document.createElement('div');
         content.innerHTML = msg.content || '';
         bubble.appendChild(meta);
@@ -261,18 +285,99 @@
       });
     }
     
+    function enableInlineEditing() {
+      var box = document.getElementById('messages');
+      if (!box) return;
+      box.addEventListener('click', function(e) {
+        var bubble = e.target.closest('.msg');
+        if (!bubble) return;
+        var editable = bubble.getAttribute('data-editable');
+        if (editable !== 'true' && editable !== 'True') return;
+        // Avoid duplicate editor
+        if (bubble.querySelector('.edit-actions')) return;
+        var contentEl = bubble.querySelector('.content');
+        if (!contentEl) return;
+        var originalHtml = contentEl.innerHTML;
+        var originalText = contentEl.textContent;
+        var textarea = document.createElement('textarea');
+        textarea.value = originalText;
+        textarea.style.width = '100%';
+        textarea.style.boxSizing = 'border-box';
+        textarea.style.fontSize = '14px';
+        textarea.style.lineHeight = '1.45';
+        contentEl.replaceWith(textarea);
+        var actions = document.createElement('div');
+        actions.className = 'edit-actions';
+        actions.style.marginTop = '8px';
+        var saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.className = 'secondary-btn';
+        var cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'secondary-btn';
+        actions.appendChild(saveBtn);
+        actions.appendChild(cancelBtn);
+        bubble.appendChild(actions);
+
+        function restore() {
+          var newContent = document.createElement('div');
+          newContent.className = 'content';
+          newContent.innerHTML = originalHtml;
+          textarea.replaceWith(newContent);
+          actions.remove();
+        }
+
+        cancelBtn.addEventListener('click', function(ev){ ev.preventDefault(); restore(); });
+
+        saveBtn.addEventListener('click', function(ev){
+          ev.preventDefault();
+          var newVal = textarea.value.trim();
+          if (newVal.length === 0) { alert('Nội dung không được trống'); return; }
+          var messageId = bubble.getAttribute('data-id');
+          var roleKey = bubble.getAttribute('data-role') || '';
+          fetch('/api/messages/' + encodeURIComponent(messageId), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roleKey: roleKey, newContent: newVal })
+          }).then(function(res){
+            if (!res.ok) throw new Error('Failed to save');
+            return res.json();
+          }).then(function(updated){
+            // Update UI with new content and edited flag
+            var newContent = document.createElement('div');
+            newContent.className = 'content';
+            newContent.textContent = updated.content || newVal;
+            textarea.replaceWith(newContent);
+            var meta = bubble.querySelector('.meta');
+            if (meta && !meta.querySelector('.edited')) {
+              var edited = document.createElement('span');
+              edited.className = 'edited';
+              edited.textContent = '(edited)';
+              meta.appendChild(edited);
+            }
+            actions.remove();
+          }).catch(function(err){
+            alert('Lưu thất bại, vui lòng thử lại');
+            console.error(err);
+          });
+        });
+      });
+    }
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function() {
         scrollToLatest();
         hideLoadingState();
         hideErrorMessages();
         connectRealtime();
+        enableInlineEditing();
       });
     } else {
       scrollToLatest();
       hideLoadingState();
       hideErrorMessages();
       connectRealtime();
+      enableInlineEditing();
     }
   })();
 </script>
