@@ -3,6 +3,7 @@ package com.example.maschat.service;
 import com.example.maschat.domain.*;
 import com.example.maschat.repo.*;
 import jakarta.persistence.EntityManager;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final AgentRepository agentRepository;
     private final EntityManager entityManager;
+    private final SimpMessagingTemplate messagingTemplate;
     
     // Thread-safe counter for message ordering
     private final java.util.concurrent.atomic.AtomicLong messageCounter = new java.util.concurrent.atomic.AtomicLong(0);
@@ -28,12 +30,14 @@ public class ChatService {
                        ConversationParticipantRepository participantRepository,
                        MessageRepository messageRepository,
                        AgentRepository agentRepository,
-                       EntityManager entityManager) {
+                       EntityManager entityManager,
+                       SimpMessagingTemplate messagingTemplate) {
         this.conversationRepository = conversationRepository;
         this.participantRepository = participantRepository;
         this.messageRepository = messageRepository;
         this.agentRepository = agentRepository;
         this.entityManager = entityManager;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Transactional
@@ -149,6 +153,26 @@ public class ChatService {
         // Force flush to ensure user message is saved first
         entityManager.flush();
 
+        // Broadcast new message to subscribers
+        broadcastNewMessage(conversationId, m);
+
+        // If the user is requesting to talk to human staff, switch participants to staff agent and short-circuit bot logic
+        if (isHumanStaffRequested(content)) {
+            routeToStaffAgent(conversationId);
+            Message confirm = new Message();
+            confirm.setId(Ids.newUuid());
+            confirm.setConversationId(conversationId);
+            confirm.setSenderType("agent");
+            confirm.setRoleKey("staff");
+            confirm.setContent("Bạn đợi chút nhé, nhân viên chúng tôi sẽ liên hệ lại cho bạn !!!");
+            confirm.setContentType("text/markdown");
+            confirm.setCreatedAt(userMessageTime.plusMillis(200));
+            messageRepository.save(confirm);
+            entityManager.flush();
+            broadcastNewMessage(conversationId, confirm);
+            return m;
+        }
+
         try {
             // Check if this is the first user message and route to appropriate agent
             List<Message> userMessages = messageRepository.findByConversationIdAndSenderTypeOrderByCreatedAtAsc(conversationId, "user");
@@ -195,6 +219,9 @@ public class ChatService {
         
         // Staff messages don't trigger agent responses
         System.out.println("DEBUG: Staff message sent - no agent response triggered");
+        
+        // Broadcast new message to subscribers
+        broadcastNewMessage(conversationId, m);
         
         return m;
     }
@@ -276,8 +303,10 @@ public class ChatService {
         System.out.println("DEBUG: Found " + agentCount + " active agents in conversation " + conversationId);
         System.out.println("DEBUG: Agent response time: " + finalResponseTime);
         
-        // If no active agents, try to add a default agent
-        if (agentCount == 0) {
+        // If no active agents and staff not engaged, try to add a default agent
+        boolean hasStaffParticipant = ps.stream()
+            .anyMatch(p -> "agent".equals(p.getParticipantType()) && "staff".equals(p.getRoleKey()));
+        if (agentCount == 0 && !hasStaffParticipant) {
             System.out.println("DEBUG: No active agents found, adding default agent");
             addDefaultAgent(conversationId);
             // Refresh participants list
@@ -286,7 +315,13 @@ public class ChatService {
         
         boolean responseSent = false;
         
-        // Find the first active agent (excluding supervisor)
+        // If staff is engaged, do not send bot replies
+        if (ps.stream().anyMatch(p -> "agent".equals(p.getParticipantType()) && "staff".equals(p.getRoleKey()))) {
+            System.out.println("DEBUG: Staff engaged, skipping bot response");
+            return;
+        }
+
+        // Find the first active agent (excluding supervisor and staff)
         for (ConversationParticipant p : ps) {
             if (!"agent".equals(p.getParticipantType()) || "supervisor".equals(p.getRoleKey())) continue;
             
@@ -307,6 +342,9 @@ public class ChatService {
                 
                 // Force flush to ensure agent message is saved
                 entityManager.flush();
+
+                // Broadcast new agent message
+                broadcastNewMessage(conversationId, bot);
             });
             responseSent = true;
             break; // Only send one agent message
@@ -333,6 +371,9 @@ public class ChatService {
                         
                         // Force flush to ensure agent message is saved
                         entityManager.flush();
+
+                        // Broadcast new supervisor message
+                        broadcastNewMessage(conversationId, bot);
                     });
                     break;
                 }
@@ -361,6 +402,35 @@ public class ChatService {
             // Supervisor leaves after routing
             removeSupervisorFromConversation(conversationId);
         }
+    }
+
+    private void routeToStaffAgent(String conversationId) {
+        // Add StaffAgent participant and remove other non-supervisor agents
+        List<Agent> staffAgents = agentRepository.findByKind("StaffAgent");
+        Agent staff = staffAgents.isEmpty() ? null : staffAgents.get(0);
+        List<ConversationParticipant> participants = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversationId);
+
+        // Remove all non-supervisor agents
+        for (ConversationParticipant p : participants) {
+            if ("agent".equals(p.getParticipantType()) && !"supervisor".equals(p.getRoleKey())) {
+                participantRepository.delete(p);
+            }
+        }
+        entityManager.flush();
+
+        // Add staff participant
+        if (staff != null) {
+            ConversationParticipant p = new ConversationParticipant();
+            p.setConversationId(conversationId);
+            p.setParticipantType("agent");
+            p.setAgentId(staff.getId());
+            p.setRoleKey("staff");
+            p.setJoinedAt(Instant.now());
+            participantRepository.save(p);
+        }
+
+        // Remove supervisor once staff is assigned
+        removeSupervisorFromConversation(conversationId);
     }
     
     private void switchToAgent(String conversationId, String agentKind) {
@@ -590,6 +660,47 @@ public class ChatService {
             System.err.println("Error in checkForMissedResponses: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void broadcastNewMessage(String conversationId, Message message) {
+        try {
+            messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, message);
+        } catch (Exception e) {
+            System.err.println("Failed to broadcast message for conversation " + conversationId + ": " + e.getMessage());
+        }
+    }
+
+    private boolean isHumanStaffRequested(String content) {
+        if (content == null) return false;
+        String c = content.toLowerCase().trim();
+        String[] triggers = new String[] {
+            "tôi muốn nói chuyện với nhân viên",
+            "nói chuyện với nhân viên",
+            "gặp người quản lý",
+            "gặp quản lý",
+            "có ai không",
+            "kết nối tôi với bộ phận hỗ trợ",
+            "kết nối với bộ phận hỗ trợ",
+            "yêu cầu hoàn tiền",
+            "hoàn tiền",
+            "đổi sản phẩm",
+            "đổi hàng",
+            "hỗ trợ trực tiếp",
+            "nói chuyện với người thật",
+            "support agent",
+            "human agent",
+            "talk to human",
+            "talk to agent",
+            "contact support",
+            "sửa thông tin cá nhân",
+            "sửa địa chỉ giao hàng",
+            "cập nhật địa chỉ giao hàng",
+            "đổi địa chỉ giao hàng"
+        };
+        for (String t : triggers) {
+            if (c.contains(t)) return true;
+        }
+        return false;
     }
 }
 

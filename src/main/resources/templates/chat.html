@@ -4,38 +4,71 @@
     <meta charset="UTF-8"/>
     <title>Chat</title>
     <style>
-        body{font-family:Arial, sans-serif;margin:0;height:100vh;display:flex;flex-direction:column}
-        header{padding:12px 16px;border-bottom:1px solid #eee}
+        body{font-family:Arial, sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;color:#1f2937;
+            background:
+              radial-gradient(1200px 600px at -10% -10%, #e0f2fe 0%, rgba(224,242,254,0) 70%),
+              radial-gradient(1000px 500px at 110% 0%, #fee2e2 0%, rgba(254,226,226,0) 65%),
+              radial-gradient(900px 500px at 50% 120%, #e9d5ff 0%, rgba(233,213,255,0) 60%),
+              linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)}
+        .container{width:100%;max-width:980px;margin:0 auto;box-sizing:border-box;padding:0 16px}
+        header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(8px);-webkit-backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid #e5e7eb}
+        .toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+        .toolbar-left{display:flex;align-items:center;gap:10px}
+        .back-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;color:#111827;text-decoration:none;font-weight:600}
+        .back-btn:hover{background:#f9fafb}
+        .staff-badge{display:inline-flex;align-items:center;gap:6px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px}
+        .toolbar-actions a{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#111827;color:#fff;border-radius:10px;text-decoration:none;border:1px solid #111827}
+        .toolbar-actions a:hover{background:#1f2937}
+        .floating-back{position:fixed;left:16px;top:16px;z-index:50;display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;color:#111827;text-decoration:none;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+        .floating-back:hover{background:#f9fafb}
         main{flex:1;display:flex;flex-direction:column}
-        .messages{flex:1;overflow:auto;padding:16px;background:#fafafa}
-        .msg{margin:8px 0;padding:10px 12px;border-radius:8px;max-width:70%;display:inline-block}
-        .user{background:#e6f7ff;border:1px solid #91d5ff}
-        .agent{background:#fffbe6;border:1px solid #ffe58f}
-        .staff{background:#f6ffed;border:1px solid #b7eb8f}
-        .staff.right{background:#e6f7ff;border:1px solid #91d5ff}
-        .agent.right{background:#e6f7ff;border:1px solid #91d5ff}
-        .left{align-self:flex-start;text-align:left}
-        .right{align-self:flex-end;text-align:left}
-        .row{display:flex}
+        .container-full{flex:1;display:flex}
+        .messages{flex:1;overflow:auto;padding:20px 16px 24px;background:rgba(255,255,255,.55);border:1px solid #e5e7eb;border-radius:16px;backdrop-filter:saturate(140%) blur(6px);-webkit-backdrop-filter:saturate(140%) blur(6px)}
+        .thread{display:flex;flex-direction:column;gap:10px}
+        .row{display:flex;align-items:flex-end;gap:8px}
         .row.left{justify-content:flex-start}
         .row.right{justify-content:flex-end}
-        .meta{font-size:12px;color:#888;margin-bottom:6px}
-        form{display:flex;gap:8px;padding:12px;border-top:1px solid #eee;position:sticky;bottom:0;background:#fff}
-        textarea{flex:1;padding:8px}
-        .header-actions{float:right}
-        .header-actions a{margin-left:8px}
+        .msg{margin:2px 0;padding:10px 12px;border-radius:16px;max-width:72%;display:inline-block;box-shadow:0 1px 1px rgba(0,0,0,.02),0 2px 4px rgba(0,0,0,.04)}
+        .row.left .msg{border-top-left-radius:8px;border-top-right-radius:16px;border-bottom-right-radius:16px;border-bottom-left-radius:4px}
+        .row.right .msg{border-top-left-radius:16px;border-top-right-radius:8px;border-bottom-right-radius:4px;border-bottom-left-radius:16px}
+        .meta{font-size:12px;color:#6b7280;margin-bottom:6px;display:flex;gap:8px;align-items:center}
+        .time{font-variant-numeric:tabular-nums;color:#9ca3af}
+        .msg .content{font-size:14px;line-height:1.45;white-space:pre-wrap}
+        .user{background:#e8f3ff;border:1px solid #cde3ff}
+        .agent{background:#fff8e7;border:1px solid #ffe2a8}
+        .staff{background:#ecfdf5;border:1px solid #bbf7d0}
+        .staff.right,.agent.right{background:#e8f3ff;border:1px solid #cde3ff}
+        form{display:flex;padding:14px 16px;position:sticky;bottom:0;background:rgba(255,255,255,.0);backdrop-filter:saturate(140%) blur(6px)}
+        .composer{display:flex;gap:10px;align-items:center;width:100%;border:1px solid #eef2f7;border-radius:14px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:6px 8px}
+        .composer:focus-within{border-color:#c7d2fe;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+        textarea{flex:1;padding:10px 12px;border:none;border-radius:10px;resize:none;font-size:14px;outline:none;background:transparent;max-height:160px;min-height:42px}
+        textarea:focus{outline:none}
+        #sendButton{height:40px;padding:0 16px;background:#2563eb;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;white-space:nowrap}
+        #sendButton:hover{background:#1d4ed8}
+        .secondary-btn{padding:10px 12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;cursor:pointer}
+        .secondary-btn:hover{background:#e5e7eb}
     </style>
+    <!-- Realtime libs -->
+    <script src="https://unpkg.com/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://unpkg.com/stompjs@2.3.3/lib/stomp.min.js"></script>
     </head>
 <body>
+<a class="floating-back" th:href="@{/conversations}">⟵ Back</a>
 <header>
-    <a th:href="@{/conversations}">◀ Back</a>
-    <span th:if="${session.isStaff}" style="color: #28a745; font-weight: bold; margin-left: 10px;">👨‍💼 Staff View</span>
-    <span class="header-actions" th:if="${session.isStaff}">
-        <a th:href="@{'/chat/' + ${conversationId} + '/agents'}">Manage agents</a>
-    </span>
-</header>
+    <div class="container toolbar">
+        <div class="toolbar-left">
+            <a class="back-btn" th:href="@{/conversations}">⟵ Back</a>
+            <span class="staff-badge" th:if="${session.isStaff}">👨‍💼 Staff</span>
+        </div>
+        <div class="toolbar-actions" th:if="${session.isStaff}">
+            <a th:href="@{'/chat/' + ${conversationId} + '/agents'}">Manage participants</a>
+        </div>
+    </div>
+    </header>
 <main>
-    <div id="messages" class="messages">
+    <div class="container container-full">
+    <div id="messages" class="messages" th:attr="data-conversation-id=${conversationId},data-current-user-id=${currentUserId},data-is-staff=${isStaff}">
+        <div class="thread">
         <!-- Error message display -->
         <div th:if="${param.error}" class="error-message" style="background: #ffebee; border: 1px solid #f44336; color: #c62828; padding: 8px; margin: 8px 0; border-radius: 4px;">
             <span th:if="${param.error[0] == 'empty_message'}">Please enter a message before sending.</span>
@@ -48,16 +81,21 @@
              th:class="${'row ' + (shouldShowRight ? 'right' : 'left')}">
             <div th:class="${'msg ' + (m.senderType) + ' ' + (shouldShowRight ? 'right' : 'left')}"
                  th:id="${stat.last} ? 'last' : null">
-                <div class="meta" th:text="${m.roleKey} + ' • ' + ${m.senderType}"></div>
-                <div th:utext="${m.content}"></div>
+                <div class="meta">
+                    <span th:text="${m.roleKey} + ' • ' + ${m.senderType}"></span>
+                    <span class="time" th:text="${#temporals.format(m.createdAt, 'HH:mm')} "></span>
+                </div>
+                <div class="content" th:utext="${m.content}"></div>
             </div>
         </div>
+        </div>
     </div>
-    <form th:action="@{'/chat/' + ${conversationId} + '/send'}" method="post" id="messageForm">
-        <textarea name="content" rows="2" placeholder="Type a message..." id="messageInput" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" required></textarea>
-        <button type="submit" id="sendButton" style="margin-top: 8px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Send</button>
-        <button type="button" onclick="debugForm()" style="margin-left: 8px; margin-top: 8px; padding: 8px 16px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Debug</button>
-        <button type="button" onclick="testInput()" style="margin-left: 8px; margin-top: 8px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Test Input</button>
+    </div>
+    <form class="container" th:action="@{'/chat/' + ${conversationId} + '/send'}" method="post" id="messageForm">
+        <div class="composer">
+            <textarea name="content" rows="2" placeholder="Type a message..." id="messageInput" required></textarea>
+            <button type="submit" id="sendButton">Send</button>
+        </div>
     </form>
 </main>
 <script>
@@ -86,52 +124,7 @@
     return true;
   }
   
-  // Debug function
-  function debugForm() {
-    var form = document.getElementById('messageForm');
-    var messageInput = document.getElementById('messageInput');
-    
-    console.log('=== DEBUG FORM ===');
-    console.log('Form:', form);
-    console.log('Message input:', messageInput);
-    console.log('Message input type:', messageInput ? messageInput.type : 'null');
-    console.log('Message input name:', messageInput ? messageInput.name : 'null');
-    console.log('Message input id:', messageInput ? messageInput.id : 'null');
-    console.log('Message value:', messageInput ? messageInput.value : 'null');
-    console.log('Message value type:', typeof (messageInput ? messageInput.value : 'null'));
-    console.log('Message length:', messageInput ? messageInput.value.length : 'null');
-    console.log('Message trimmed:', messageInput ? messageInput.value.trim() : 'null');
-    console.log('Message trimmed length:', messageInput ? messageInput.value.trim().length : 'null');
-    console.log('Form action:', form ? form.action : 'null');
-    console.log('Form method:', form ? form.method : 'null');
-    
-    // Check if textarea is focused
-    console.log('Is textarea focused:', document.activeElement === messageInput);
-    console.log('Active element:', document.activeElement);
-    
-    // Try to get value using different methods
-    if (messageInput) {
-      console.log('Value via .value:', messageInput.value);
-      console.log('Value via getAttribute:', messageInput.getAttribute('value'));
-      console.log('Value via innerHTML:', messageInput.innerHTML);
-      console.log('Value via textContent:', messageInput.textContent);
-    }
-    
-    alert('Check console for debug info. Message: "' + (messageInput ? messageInput.value : 'null') + '"');
-  }
-  
-  // Test input function
-  function testInput() {
-    var messageInput = document.getElementById('messageInput');
-    if (messageInput) {
-      messageInput.value = 'Test message from button';
-      messageInput.focus();
-      console.log('Test message set:', messageInput.value);
-      alert('Test message set: "' + messageInput.value + '"');
-    } else {
-      alert('Message input not found!');
-    }
-  }
+  // Removed debug and test-input helpers
 
   (function(){
     function scrollToLatest(){
@@ -142,6 +135,64 @@
       }
       var box = document.getElementById('messages');
       if (box) { box.scrollTop = box.scrollHeight; }
+    }
+    
+    function renderIncomingMessage(msg){
+      try{
+        var box = document.getElementById('messages');
+        if(!box) return;
+        var isStaff = (box.getAttribute('data-is-staff') === 'true' || box.getAttribute('data-is-staff') === 'True');
+        var currentUserId = box.getAttribute('data-current-user-id');
+        var shouldShowRight = false;
+        if (isStaff) {
+          shouldShowRight = (msg.senderType === 'agent' || msg.senderType === 'staff');
+        } else {
+          shouldShowRight = (msg.senderType === 'user' && msg.senderUserId === currentUserId);
+        }
+        var row = document.createElement('div');
+        row.className = 'row ' + (shouldShowRight ? 'right' : 'left');
+        var bubble = document.createElement('div');
+        bubble.className = 'msg ' + msg.senderType + ' ' + (shouldShowRight ? 'right' : 'left');
+        var meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = (msg.roleKey || '') + ' • ' + (msg.senderType || '');
+        var content = document.createElement('div');
+        content.innerHTML = msg.content || '';
+        bubble.appendChild(meta);
+        bubble.appendChild(content);
+        row.appendChild(bubble);
+        box.appendChild(row);
+        scrollToLatest();
+      } catch(e){
+        console.error('Failed to render incoming message', e);
+      }
+    }
+    
+    function connectRealtime(){
+      var box = document.getElementById('messages');
+      if(!box) return;
+      var conversationId = box.getAttribute('data-conversation-id');
+      if(!conversationId) return;
+      try{
+        var socket = new SockJS('/ws');
+        var stomp = Stomp.over(socket);
+        // Optional: silence debug logs
+        stomp.debug = null;
+        stomp.connect({}, function(){
+          stomp.subscribe('/topic/conversations/' + conversationId, function(frame){
+            try{
+              var payload = JSON.parse(frame.body);
+              renderIncomingMessage(payload);
+            } catch(e){
+              console.error('Bad message payload', e, frame.body);
+            }
+          });
+        }, function(error){
+          console.error('STOMP connection error', error);
+        });
+      } catch(e){
+        console.error('Failed to init realtime', e);
+      }
     }
     
     function showLoadingState() {
@@ -170,34 +221,30 @@
       }
     }
     
-    // Handle form submission - no validation, just loading state
+    // Handle form submission with fetch to avoid reload
     var messageForm = document.getElementById('messageForm');
     if (messageForm) {
       messageForm.addEventListener('submit', function(e) {
-        console.log('Form submit event listener triggered');
+        e.preventDefault();
         var messageInput = document.getElementById('messageInput');
-        console.log('Message value on submit:', messageInput ? messageInput.value : 'null');
-        
-        // Log form data
-        var formData = new FormData(messageForm);
-        console.log('Form data:');
-        for (var pair of formData.entries()) {
-          console.log(pair[0] + ': ' + pair[1]);
+        var value = messageInput ? messageInput.value : '';
+        if (!value || value.length === 0) {
+          alert('Please enter a message before sending.');
+          return;
         }
-        
-        // Force set the content value before submit
-        if (messageInput && messageInput.value) {
-          console.log('Forcing content value before submit');
-          // Create a hidden input to ensure the value is sent
-          var hiddenInput = document.createElement('input');
-          hiddenInput.type = 'hidden';
-          hiddenInput.name = 'content';
-          hiddenInput.value = messageInput.value;
-          messageForm.appendChild(hiddenInput);
-        }
-        
-        // Always show loading state when form is submitted
         showLoadingState();
+        var url = messageForm.getAttribute('action');
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'content=' + encodeURIComponent(value),
+          redirect: 'manual'
+        }).then(function(){
+          hideLoadingState();
+        }).catch(function(err){
+          console.error('Send failed', err);
+          hideLoadingState();
+        });
       });
     }
     
@@ -219,11 +266,13 @@
         scrollToLatest();
         hideLoadingState();
         hideErrorMessages();
+        connectRealtime();
       });
     } else {
       scrollToLatest();
       hideLoadingState();
       hideErrorMessages();
+      connectRealtime();
     }
   })();
 </script>

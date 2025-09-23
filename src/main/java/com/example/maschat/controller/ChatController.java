@@ -34,8 +34,13 @@ public class ChatController {
     }
 
     @GetMapping("/conversations")
-    public String conversations(Model model) {
-        model.addAttribute("conversations", conversationRepository.findAll());
+    public String conversations(Model model, jakarta.servlet.http.HttpSession session) {
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff != null && isStaff) {
+            model.addAttribute("conversations", conversationRepository.findAllHavingStaffParticipants());
+        } else {
+            model.addAttribute("conversations", conversationRepository.findAll());
+        }
         return "conversations";
     }
 
