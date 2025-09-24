@@ -3,6 +3,7 @@ package com.example.maschat.service;
 import com.example.maschat.domain.*;
 import com.example.maschat.repo.*;
 import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,29 +17,28 @@ import java.util.Map;
 
 @Service
 public class ChatService {
-    private final ConversationRepository conversationRepository;
-    private final ConversationParticipantRepository participantRepository;
-    private final MessageRepository messageRepository;
-    private final AgentRepository agentRepository;
-    private final EntityManager entityManager;
-    private final SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private ConversationRepository conversationRepository;
+
+    @Autowired
+    private ConversationParticipantRepository participantRepository;
+
+    @Autowired
+    private MessageRepository messageRepository;
+
+    @Autowired
+    private AgentRepository agentRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
     
     // Thread-safe counter for message ordering
     private final java.util.concurrent.atomic.AtomicLong messageCounter = new java.util.concurrent.atomic.AtomicLong(0);
 
-    public ChatService(ConversationRepository conversationRepository,
-                       ConversationParticipantRepository participantRepository,
-                       MessageRepository messageRepository,
-                       AgentRepository agentRepository,
-                       EntityManager entityManager,
-                       SimpMessagingTemplate messagingTemplate) {
-        this.conversationRepository = conversationRepository;
-        this.participantRepository = participantRepository;
-        this.messageRepository = messageRepository;
-        this.agentRepository = agentRepository;
-        this.entityManager = entityManager;
-        this.messagingTemplate = messagingTemplate;
-    }
 
     @Transactional
     public Conversation startConversation(String title, String createdByUserId, List<String> agentIds) {
@@ -428,6 +428,8 @@ public class ChatService {
             p.setRoleKey("staff");
             p.setJoinedAt(Instant.now());
             participantRepository.save(p);
+            // Ensure staff participant is persisted immediately to block bot replies
+            entityManager.flush();
         }
 
         // Remove supervisor once staff is assigned
@@ -632,6 +634,18 @@ public class ChatService {
             List<Conversation> conversations = conversationRepository.findAll();
             
             for (Conversation conversation : conversations) {
+                // Skip if staff engaged or staff confirmation message exists
+                List<ConversationParticipant> ps = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversation.getId());
+                boolean staffEngaged = ps.stream().anyMatch(p -> "agent".equals(p.getParticipantType()) && "staff".equals(p.getRoleKey()));
+                if (staffEngaged) {
+                    continue;
+                }
+                // Also skip if a staff confirmation message exists recently
+                List<Message> staffMessages = messageRepository.findByConversationIdAndRoleKeyOrderByCreatedAtAsc(conversation.getId(), "staff");
+                boolean hasRecentStaffMsg = staffMessages.stream().anyMatch(m -> m.getCreatedAt() != null && m.getCreatedAt().isAfter(fiveMinutesAgo));
+                if (hasRecentStaffMsg) {
+                    continue;
+                }
                 List<Message> userMessages = messageRepository.findByConversationIdAndSenderTypeOrderByCreatedAtAsc(conversation.getId(), "user");
                 List<Message> agentMessages = messageRepository.findByConversationIdAndSenderTypeOrderByCreatedAtAsc(conversation.getId(), "agent");
                 

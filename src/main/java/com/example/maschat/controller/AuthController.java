@@ -3,17 +3,17 @@ package com.example.maschat.controller;
 import com.example.maschat.domain.User;
 import com.example.maschat.service.AuthService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class AuthController {
-    private final AuthService authService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
+    @Autowired
+    private AuthService authService;
+
 
     @GetMapping("/login")
     public String loginPage() { return "login"; }

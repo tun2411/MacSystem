@@ -10,6 +10,7 @@ import java.util.List;
 public interface MessageRepository extends JpaRepository<Message, String> {
     List<Message> findByConversationIdOrderByCreatedAtAsc(String conversationId);
     List<Message> findByConversationIdAndSenderTypeOrderByCreatedAtAsc(String conversationId, String senderType);
+    List<Message> findByConversationIdAndRoleKeyOrderByCreatedAtAsc(String conversationId, String roleKey);
 
     // Ensure deterministic ordering when timestamps are equal: user first, then staff, then agent
     @Query(value = "SELECT * FROM messages m WHERE m.conversation_id = :conversationId " +

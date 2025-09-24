@@ -4,6 +4,9 @@ import com.example.maschat.domain.Conversation;
 import com.example.maschat.domain.Message;
 import com.example.maschat.repo.ConversationRepository;
 import com.example.maschat.service.ChatService;
+import com.example.maschat.service.ConversationService;
+import com.example.maschat.service.MessageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,13 +16,18 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class ApiController {
-    private final ChatService chatService;
-    private final ConversationRepository conversationRepository;
 
-    public ApiController(ChatService chatService, ConversationRepository conversationRepository) {
-        this.chatService = chatService;
-        this.conversationRepository = conversationRepository;
-    }
+    @Autowired
+    private MessageService messageService;
+
+    @Autowired
+    private ConversationRepository conversationRepository;
+
+    @Autowired
+    private ConversationService conversationService;
+
+    @Autowired
+    private ChatService chatService;
 
     @GetMapping("/conversations")
     public List<Conversation> listConversations() {
@@ -31,7 +39,7 @@ public class ApiController {
     @PostMapping("/conversations")
     public ResponseEntity<Conversation> createConversation(@RequestBody CreateConversationRequest req) {
         String demoUserId = "00000000-0000-0000-0000-000000000001";
-        Conversation c = chatService.startConversation(
+        Conversation c = conversationService.startConversation(
                 req.title(), demoUserId, req.agentIds() == null ? List.of() : req.agentIds());
         return ResponseEntity.ok(c);
     }
@@ -52,7 +60,7 @@ public class ApiController {
             return ResponseEntity.notFound().build();
         }
         String demoUserId = "00000000-0000-0000-0000-000000000001";
-        Message m = chatService.sendUserMessage(conversationId, demoUserId, req.content());
+        Message m = messageService.sendUserMessage(conversationId, demoUserId, req.content());
         return ResponseEntity.ok(m);
     }
 
@@ -61,7 +69,7 @@ public class ApiController {
     @PatchMapping("/messages/{messageId}")
     public ResponseEntity<?> editMessage(@PathVariable String messageId, @RequestBody EditMessageRequest req) {
         try {
-            Message m = chatService.editMessage(messageId, req.roleKey(), req.newContent());
+            Message m = messageService.editMessage(messageId, req.roleKey(), req.newContent());
             return ResponseEntity.ok(m);
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(403).body(Map.of("error", ex.getMessage()));
