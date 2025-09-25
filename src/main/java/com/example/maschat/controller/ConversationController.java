@@ -28,12 +28,6 @@ public class ConversationController {
     @Autowired
     private AgentRepository agentRepository;
 
-    public ConversationController(ConversationService conversationService, ConversationRepository conversationRepository, AgentRepository agentRepository) {
-        this.conversationService = conversationService;
-        this.conversationRepository = conversationRepository;
-        this.agentRepository = agentRepository;
-    }
-
     @GetMapping("/conversations")
     public String conversations(Model model, jakarta.servlet.http.HttpSession session) {
         Boolean isStaff = (Boolean) session.getAttribute("isStaff");

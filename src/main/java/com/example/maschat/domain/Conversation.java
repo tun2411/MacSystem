@@ -30,6 +30,9 @@ public class Conversation {
     @Column(name = "status")
     private String status;
 
+    @Column(name = "is_staff_engaged")
+    private Boolean isStaffEngaged = false;
+
 }
 
 

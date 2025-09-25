@@ -123,6 +123,23 @@ public class ChatService {
             participantRepository.save(p);
         }
         
+        // Update staff engaged status based on the selected agent
+        Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
+        if (conversation != null) {
+            if (agentId != null && !agentId.isEmpty()) {
+                // Check if the selected agent is a staff agent
+                Agent selectedAgent = agentRepository.findById(agentId).orElse(null);
+                boolean isStaffAgent = selectedAgent != null && "StaffAgent".equals(selectedAgent.getKind());
+                conversation.setIsStaffEngaged(isStaffAgent);
+                System.out.println("DEBUG: Updated isStaffEngaged = " + isStaffAgent + " for conversation " + conversationId);
+            } else {
+                // No agent selected, reset to false
+                conversation.setIsStaffEngaged(false);
+                System.out.println("DEBUG: Reset isStaffEngaged = false for conversation " + conversationId);
+            }
+            conversationRepository.save(conversation);
+        }
+        
         // Supervisor leaves after staff manually assigns agent
         removeSupervisorFromConversation(conversationId);
     }
@@ -171,6 +188,13 @@ public class ChatService {
             messageRepository.save(confirm);
             entityManager.flush();
             broadcastNewMessage(conversationId, confirm);
+            return m;
+        }
+
+        // Check if staff is engaged - if so, don't send bot responses
+        Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
+        if (conversation != null && Boolean.TRUE.equals(conversation.getIsStaffEngaged())) {
+            System.out.println("DEBUG: Staff is engaged, skipping bot response for conversation " + conversationId);
             return m;
         }
 
@@ -322,6 +346,13 @@ public class ChatService {
             return;
         }
 
+        // Also check the conversation's isStaffEngaged flag
+        Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
+        if (conversation != null && Boolean.TRUE.equals(conversation.getIsStaffEngaged())) {
+            System.out.println("DEBUG: Conversation marked as staff engaged, skipping bot response");
+            return;
+        }
+
         // Find the first active agent (excluding supervisor and staff)
         for (ConversationParticipant p : ps) {
             if (!"agent".equals(p.getParticipantType()) || "supervisor".equals(p.getRoleKey())) continue;
@@ -430,6 +461,14 @@ public class ChatService {
             participantRepository.save(p);
             // Ensure staff participant is persisted immediately to block bot replies
             entityManager.flush();
+        }
+
+        // Set staff engaged flag to true
+        Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
+        if (conversation != null) {
+            conversation.setIsStaffEngaged(true);
+            conversationRepository.save(conversation);
+            System.out.println("DEBUG: Set isStaffEngaged = true for conversation " + conversationId);
         }
 
         // Remove supervisor once staff is assigned
@@ -638,6 +677,10 @@ public class ChatService {
                 List<ConversationParticipant> ps = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversation.getId());
                 boolean staffEngaged = ps.stream().anyMatch(p -> "agent".equals(p.getParticipantType()) && "staff".equals(p.getRoleKey()));
                 if (staffEngaged) {
+                    continue;
+                }
+                // Also check the conversation's isStaffEngaged flag
+                if (Boolean.TRUE.equals(conversation.getIsStaffEngaged())) {
                     continue;
                 }
                 // Also skip if a staff confirmation message exists recently
