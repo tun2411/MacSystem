@@ -1,8 +1,10 @@
 package com.example.maschat.controller;
 
+import com.example.maschat.domain.Conversation;
 import com.example.maschat.domain.ConversationParticipant;
 import com.example.maschat.repo.AgentRepository;
 import com.example.maschat.repo.ConversationParticipantRepository;
+import com.example.maschat.repo.ConversationRepository;
 import com.example.maschat.service.ConversationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -28,6 +30,9 @@ public class AgentManagementController {
     @Autowired
     private ConversationParticipantRepository participantRepository;
 
+    @Autowired
+    private ConversationRepository conversationRepository;
+
     @GetMapping("/{conversationId}/agents")
     public String manageAgents(@PathVariable String conversationId, Model model, jakarta.servlet.http.HttpSession session) {
         String uid = (String) session.getAttribute("uid");
@@ -37,6 +42,24 @@ public class AgentManagementController {
         if (isStaff == null || !isStaff) {
             model.addAttribute("error", "Chỉ có staff mới được chỉnh sửa agent tham gia");
             return "redirect:/chat/" + conversationId;
+        }
+
+        // Kiểm tra quyền truy cập cuộc trò chuyện cho staff
+        Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
+        if (conversation == null) {
+            return "redirect:/login"; // Cuộc trò chuyện không tồn tại
+        }
+        
+        // Staff có quyền nếu cuộc trò chuyện đã có staff participants hoặc được đánh dấu isStaffEngaged
+        boolean hasAccess = conversationRepository.findAllHavingStaffParticipants()
+                .stream()
+                .anyMatch(c -> c.getId().equals(conversationId));
+        if (!hasAccess && Boolean.TRUE.equals(conversation.getIsStaffEngaged())) {
+            hasAccess = true;
+        }
+        
+        if (!hasAccess) {
+            return "redirect:/login"; // Không có quyền truy cập
         }
 
         model.addAttribute("conversationId", conversationId);
@@ -64,8 +87,26 @@ public class AgentManagementController {
             return "redirect:/chat/" + conversationId;
         }
 
+        // Kiểm tra quyền truy cập cuộc trò chuyện cho staff
+        Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
+        if (conversation == null) {
+            return "redirect:/login"; // Cuộc trò chuyện không tồn tại
+        }
+        
+        // Staff có quyền nếu cuộc trò chuyện đã có staff participants hoặc được đánh dấu isStaffEngaged
+        boolean hasAccess = conversationRepository.findAllHavingStaffParticipants()
+                .stream()
+                .anyMatch(c -> c.getId().equals(conversationId));
+        if (!hasAccess && Boolean.TRUE.equals(conversation.getIsStaffEngaged())) {
+            hasAccess = true;
+        }
+        
+        if (!hasAccess) {
+            return "redirect:/login"; // Không có quyền truy cập
+        }
+
         conversationService.updateConversationAgents(conversationId, agentId);
-        return "redirect:/chat/" + conversationId;
+        return "redirect:/conversations";
     }
 }
 

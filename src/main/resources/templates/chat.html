@@ -16,11 +16,11 @@
         .toolbar-left{display:flex;align-items:center;gap:10px}
         .back-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;color:#111827;text-decoration:none;font-weight:600}
         .back-btn:hover{background:#f9fafb}
+        .conversation-title{font-size:18px;font-weight:700;color:#1f2937;margin:0 8px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .staff-badge{display:inline-flex;align-items:center;gap:6px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px}
+        .admin-badge{display:inline-flex;align-items:center;gap:6px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px}
         .toolbar-actions a{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#111827;color:#fff;border-radius:10px;text-decoration:none;border:1px solid #111827}
         .toolbar-actions a:hover{background:#1f2937}
-        .floating-back{position:fixed;left:16px;top:16px;z-index:50;display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;color:#111827;text-decoration:none;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-        .floating-back:hover{background:#f9fafb}
         main{flex:1;display:flex;flex-direction:column}
         .container-full{flex:1;display:flex}
         .messages{flex:1;overflow:auto;padding:20px 16px 24px;background:rgba(255,255,255,.55);border:1px solid #e5e7eb;border-radius:16px;backdrop-filter:saturate(140%) blur(6px);-webkit-backdrop-filter:saturate(140%) blur(6px)}
@@ -38,7 +38,12 @@
         .user{background:#e8f3ff;border:1px solid #cde3ff}
         .agent{background:#fff8e7;border:1px solid #ffe2a8}
         .staff{background:#ecfdf5;border:1px solid #bbf7d0}
-        .staff.right,.agent.right{background:#e8f3ff;border:1px solid #cde3ff}
+        /* Tin nhắn của user khi hiển thị bên phải */
+        .user.right{background:#e8f3ff;border:1px solid #cde3ff}
+        /* Tin nhắn của agent khi hiển thị bên phải */
+        .agent.right{background:#fff8e7;border:1px solid #ffe2a8}
+        /* Tin nhắn của staff khi hiển thị bên phải - màu xanh lá */
+        .staff.right{background:#d1fae5;border:1px solid #a7f3d0}
         form{display:flex;padding:14px 16px;position:sticky;bottom:0;background:rgba(255,255,255,.0);backdrop-filter:saturate(140%) blur(6px)}
         .composer{display:flex;gap:10px;align-items:center;width:100%;border:1px solid #eef2f7;border-radius:14px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.03);padding:6px 8px}
         .composer:focus-within{border-color:#c7d2fe;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
@@ -54,12 +59,13 @@
     <script src="https://unpkg.com/stompjs@2.3.3/lib/stomp.min.js"></script>
     </head>
 <body>
-<a class="floating-back" th:href="@{/conversations}">⟵ Back</a>
 <header>
     <div class="container toolbar">
         <div class="toolbar-left">
             <a class="back-btn" th:href="@{/conversations}">⟵ Back</a>
-            <span class="staff-badge" th:if="${session.isStaff}">👨‍💼 Staff</span>
+            <div class="conversation-title" th:text="${conversationTitle}">Conversation Title</div>
+            <span class="admin-badge" th:if="${session.isAdmin}">👑 Admin</span>
+            <span class="staff-badge" th:if="${session.isStaff and !session.isAdmin}">👨‍💼 Staff</span>
         </div>
         <div class="toolbar-actions" th:if="${session.isStaff}">
             <a th:href="@{'/chat/' + ${conversationId} + '/agents'}">Manage participants</a>
@@ -73,13 +79,15 @@
         <!-- Error message display -->
         <div th:if="${param.error}" class="error-message" style="background: #ffebee; border: 1px solid #f44336; color: #c62828; padding: 8px; margin: 8px 0; border-radius: 4px;">
             <span th:if="${param.error[0] == 'empty_message'}">Please enter a message before sending.</span>
+            <span th:if="${param.error[0] == 'admin_cannot_send'}">Admin không thể gửi tin nhắn.</span>
         </div>
         
         <div th:each="m,stat: ${messages}"
              th:with="isStaff=${session.isStaff != null and session.isStaff}, 
+                      isAdmin=${session.isAdmin != null and session.isAdmin},
                       isCurrentUser=${m.senderType == 'user' and m.senderUserId == currentUserId},
                       canEdit=${(m.senderType == 'user' and m.senderUserId == currentUserId) or (isStaff and m.senderType == 'staff' and m.senderUserId == currentUserId)},
-                      shouldShowRight=${isStaff and (m.senderType == 'agent' or m.senderType == 'staff') or (!isStaff and isCurrentUser)}"
+                      shouldShowRight=${(isStaff or isAdmin) and (m.senderType == 'agent' or m.senderType == 'staff') or (!isStaff and !isAdmin and isCurrentUser)}"
              th:class="${'row ' + (shouldShowRight ? 'right' : 'left')}">
             <div th:class="${'msg ' + (m.senderType) + ' ' + (shouldShowRight ? 'right' : 'left')}"
                  th:id="${stat.last} ? 'last' : null"
@@ -95,12 +103,16 @@
         </div>
     </div>
     </div>
-    <form class="container" th:action="@{'/chat/' + ${conversationId} + '/send'}" method="post" id="messageForm">
+    <form class="container" th:action="@{'/chat/' + ${conversationId} + '/send'}" method="post" id="messageForm" th:if="${session.isAdmin == null or !session.isAdmin}">
         <div class="composer">
             <textarea name="content" rows="2" placeholder="Type a message..." id="messageInput" required></textarea>
             <button type="submit" id="sendButton">Send</button>
         </div>
     </form>
+    <div class="container" th:if="${session.isAdmin != null and session.isAdmin}" style="padding: 14px 16px; text-align: center; color: #6b7280; font-size: 14px;">
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px;">
+        </div>
+    </div>
 </main>
 <script>
   // Global function for form validation - simplified

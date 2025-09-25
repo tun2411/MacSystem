@@ -13,6 +13,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Stri
 
     @Query(value = "SELECT * FROM conversations c WHERE EXISTS (SELECT 1 FROM conversation_participants p WHERE p.conversation_id = c.id AND p.participant_type = 'agent' AND p.role_key = 'staff') ORDER BY c.created_at DESC", nativeQuery = true)
     java.util.List<Conversation> findAllHavingStaffParticipants();
+
+    @Query(value = "SELECT * FROM conversations c WHERE (EXISTS (SELECT 1 FROM conversation_participants p WHERE p.conversation_id = c.id AND p.participant_type = 'agent' AND p.role_key = 'staff')) OR (c.is_staff_engaged = true) ORDER BY c.created_at DESC", nativeQuery = true)
+    java.util.List<Conversation> findAllHavingStaffParticipantsOrEngaged();
 }
 
 

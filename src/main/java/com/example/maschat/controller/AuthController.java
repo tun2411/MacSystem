@@ -28,6 +28,7 @@ public class AuthController {
                     session.setAttribute("uid", u.getId());
                     session.setAttribute("uname", u.getDisplayName());
                     session.setAttribute("isStaff", u.isStaff());
+                    session.setAttribute("isAdmin", u.isAdmin());
                     return "redirect:/";
                 })
                 .orElseGet(() -> {

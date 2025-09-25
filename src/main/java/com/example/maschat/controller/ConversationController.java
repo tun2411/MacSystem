@@ -2,9 +2,11 @@ package com.example.maschat.controller;
 
 import com.example.maschat.domain.Agent;
 import com.example.maschat.domain.Conversation;
+import com.example.maschat.domain.User;
 import com.example.maschat.service.ConversationService;
 import com.example.maschat.repo.AgentRepository;
 import com.example.maschat.repo.ConversationRepository;
+import com.example.maschat.repo.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,19 +30,47 @@ public class ConversationController {
     @Autowired
     private AgentRepository agentRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping("/conversations")
     public String conversations(Model model, jakarta.servlet.http.HttpSession session) {
+        String uid = (String) session.getAttribute("uid");
+        if (uid == null) {
+            return "redirect:/login";
+        }
+        
         Boolean isStaff = (Boolean) session.getAttribute("isStaff");
-        if (isStaff != null && isStaff) {
+        Boolean isAdmin = (Boolean) session.getAttribute("isAdmin");
+        
+        if (isAdmin != null && isAdmin) {
+            // Admin thấy tất cả cuộc trò chuyện
+            model.addAttribute("conversations", conversationRepository.findAll());
+        } else if (isStaff != null && isStaff) {
+            // Staff chỉ thấy các cuộc trò chuyện có staff participant
             model.addAttribute("conversations", conversationRepository.findAllHavingStaffParticipants());
         } else {
-            model.addAttribute("conversations", conversationRepository.findAll());
+            // User thông thường chỉ thấy cuộc trò chuyện do chính họ tạo ra
+            model.addAttribute("conversations", conversationRepository.findByCreatedByUserOrderByCreatedAtDesc(uid));
         }
+        
+        // Thêm thông tin user vào model
+        User user = userRepository.findById(uid).orElse(null);
+        if (user != null) {
+            model.addAttribute("currentUser", user);
+        }
+        
         return "conversations";
     }
 
     @GetMapping("/conversations/new")
     public String newConversation(Model model, jakarta.servlet.http.HttpSession session) {
+        // Kiểm tra nếu là staff thì chuyển hướng về trang conversations
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff != null && isStaff) {
+            return "redirect:/conversations";
+        }
+        
         List<Agent> agents = agentRepository.findByActiveTrue();
         model.addAttribute("agents", agents);
         String uid = (String) session.getAttribute("uid");
@@ -55,6 +85,12 @@ public class ConversationController {
                                     @RequestParam(required = false) List<String> agentIds,
                                     Model model,
                                     jakarta.servlet.http.HttpSession session) {
+        // Kiểm tra nếu là staff thì chuyển hướng về trang conversations
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff != null && isStaff) {
+            return "redirect:/conversations";
+        }
+        
         String uid = (String) session.getAttribute("uid");
         if (uid == null) return "redirect:/login";
         Conversation c = conversationService.startConversation(title, uid, agentIds == null ? List.of() : agentIds);

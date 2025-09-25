@@ -16,7 +16,6 @@
         .agent-info{flex:1}
         .agent-name{font-weight:bold;color:#1f2937}
         .agent-kind{font-size:12px;color:#6b7280}
-        .search{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:12px}
         .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
         a.btn,button{padding:8px 16px;border:1px solid #2563eb;border-radius:8px;background:#dbeafe;color:#2563eb;text-decoration:none;cursor:pointer}
         .btn-ghost{border-color:#e5e7eb;background:#fff;color:#374151}
@@ -25,24 +24,13 @@
     </head>
 <body>
 <div class="box">
-    <h2>Chọn Agent tham gia</h2>
-    
-    <div class="info">
-        <strong>Lưu ý:</strong> Chỉ có thể chọn 1 agent tại một thời điểm. Supervisor sẽ luôn tham gia.
-    </div>
     
     <form th:action="@{'/chat/' + ${conversationId} + '/agents'}" method="post">
-        <div class="form-group">
-            <label>Tìm kiếm agent</label>
-            <input id="search" type="text" class="search" placeholder="Tìm theo tên hoặc loại agent..." autocomplete="off" />
-        </div>
-        
         <div class="form-group">
             <label>Chọn agent tham gia</label>
             <div class="agent-list" id="agentList">
                 <div class="agent-item" th:each="a: ${allAgents}" 
-                     th:class="${'agent-item' + (a.id == currentAgentId ? ' selected' : '')}"
-                     th:attr="data-name=${a.displayName},data-kind=${a.kind}">
+                     th:class="${'agent-item' + (a.id == currentAgentId ? ' selected' : '')}">
                     <input type="radio" name="agentId" th:value="${a.id}" 
                            th:checked="${a.id == currentAgentId}" />
                     <div class="agent-info">
@@ -62,21 +50,8 @@
 
 <script>
   (function(){
-    var searchInput = document.getElementById('search');
     var agentList = document.getElementById('agentList');
     var agentItems = agentList.querySelectorAll('.agent-item');
-
-    function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
-    
-    function applyFilter(){
-      var query = normalize(searchInput.value);
-      agentItems.forEach(function(item){
-        var name = normalize(item.getAttribute('data-name') || '');
-        var kind = normalize(item.getAttribute('data-kind') || '');
-        var show = !query || name.indexOf(query) > -1 || kind.indexOf(query) > -1;
-        item.style.display = show ? 'flex' : 'none';
-      });
-    }
 
     function selectAgent(item){
       // Remove selected class from all items
@@ -96,14 +71,6 @@
         }
       });
     });
-
-    // Add search functionality
-    if (searchInput){
-      searchInput.addEventListener('input', applyFilter);
-    }
-
-    // Initialize
-    applyFilter();
   })();
 </script>
 </body>

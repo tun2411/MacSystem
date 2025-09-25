@@ -30,14 +30,32 @@ public class ApiController {
     private ChatService chatService;
 
     @GetMapping("/conversations")
-    public List<Conversation> listConversations() {
-        return conversationRepository.findAll();
+    public List<Conversation> listConversations(jakarta.servlet.http.HttpSession session) {
+        String uid = (String) session.getAttribute("uid");
+        if (uid == null) {
+            return List.of(); // Trả về danh sách rỗng nếu chưa đăng nhập
+        }
+        
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff != null && isStaff) {
+            // Staff chỉ thấy các cuộc trò chuyện có staff participant
+            return conversationRepository.findAllHavingStaffParticipants();
+        } else {
+            // User thông thường chỉ thấy cuộc trò chuyện do chính họ tạo ra
+            return conversationRepository.findByCreatedByUserOrderByCreatedAtDesc(uid);
+        }
     }
 
     public record CreateConversationRequest(String title, List<String> agentIds) {}
 
     @PostMapping("/conversations")
-    public ResponseEntity<Conversation> createConversation(@RequestBody CreateConversationRequest req) {
+    public ResponseEntity<Conversation> createConversation(@RequestBody CreateConversationRequest req, jakarta.servlet.http.HttpSession session) {
+        // Kiểm tra nếu là staff thì từ chối tạo cuộc trò chuyện
+        Boolean isStaff = (Boolean) session.getAttribute("isStaff");
+        if (isStaff != null && isStaff) {
+            return ResponseEntity.status(403).body(null);
+        }
+        
         String demoUserId = "00000000-0000-0000-0000-000000000001";
         Conversation c = conversationService.startConversation(
                 req.title(), demoUserId, req.agentIds() == null ? List.of() : req.agentIds());

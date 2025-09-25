@@ -28,6 +28,9 @@ public class User {
     @Column(name = "is_staff")
     private boolean staff;
 
+    @Column(name = "is_admin")
+    private boolean admin;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 

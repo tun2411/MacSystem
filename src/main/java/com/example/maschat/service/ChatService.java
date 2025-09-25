@@ -101,6 +101,11 @@ public class ChatService {
 
     @Transactional
     public void updateConversationAgents(String conversationId, String agentId) {
+        // If no selection provided, treat as no-op to avoid clearing state
+        if (agentId == null || agentId.isEmpty()) {
+            return;
+        }
+
         // Remove all existing agents (except supervisor) manually
         List<ConversationParticipant> participants = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversationId);
         for (ConversationParticipant p : participants) {
@@ -112,31 +117,25 @@ public class ChatService {
         // Force flush to ensure deletions are committed
         entityManager.flush();
         
-        // Add the selected agent if provided
-        if (agentId != null && !agentId.isEmpty()) {
-            ConversationParticipant p = new ConversationParticipant();
-            p.setConversationId(conversationId);
-            p.setParticipantType("agent");
-            p.setAgentId(agentId);
-            p.setRoleKey("agent");
-            p.setJoinedAt(Instant.now());
-            participantRepository.save(p);
-        }
+        // Add the selected agent
+        Agent selectedAgentForRole = agentRepository.findById(agentId).orElse(null);
+        String roleKeyForParticipant = (selectedAgentForRole != null && "StaffAgent".equals(selectedAgentForRole.getKind())) ? "staff" : "agent";
+        ConversationParticipant p = new ConversationParticipant();
+        p.setConversationId(conversationId);
+        p.setParticipantType("agent");
+        p.setAgentId(agentId);
+        p.setRoleKey(roleKeyForParticipant);
+        p.setJoinedAt(Instant.now());
+        participantRepository.save(p);
         
         // Update staff engaged status based on the selected agent
         Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
         if (conversation != null) {
-            if (agentId != null && !agentId.isEmpty()) {
-                // Check if the selected agent is a staff agent
-                Agent selectedAgent = agentRepository.findById(agentId).orElse(null);
-                boolean isStaffAgent = selectedAgent != null && "StaffAgent".equals(selectedAgent.getKind());
-                conversation.setIsStaffEngaged(isStaffAgent);
-                System.out.println("DEBUG: Updated isStaffEngaged = " + isStaffAgent + " for conversation " + conversationId);
-            } else {
-                // No agent selected, reset to false
-                conversation.setIsStaffEngaged(false);
-                System.out.println("DEBUG: Reset isStaffEngaged = false for conversation " + conversationId);
-            }
+            // Check if the selected agent is a staff agent
+            Agent selectedAgent = selectedAgentForRole;
+            boolean isStaffAgent = selectedAgent != null && "StaffAgent".equals(selectedAgent.getKind());
+            conversation.setIsStaffEngaged(isStaffAgent);
+            System.out.println("DEBUG: Updated isStaffEngaged = " + isStaffAgent + " for conversation " + conversationId);
             conversationRepository.save(conversation);
         }
         
@@ -567,50 +566,43 @@ public class ChatService {
     
     private String analyzeMessageContent(String content) {
         String lowerContent = content.toLowerCase();
-        
-        // Positive keywords
+
         String[] positiveKeywords = {
             "tuyệt vời", "tốt", "cảm ơn", "hài lòng", "yêu thích", "xuất sắc", "hoàn hảo", 
             "thích", "ưng ý", "ok", "okay", "tốt lắm", "hay", "đẹp", "chất lượng",
             "recommend", "giới thiệu", "khen", "khen ngợi", "thích thú"
         };
-        
-        // Negative keywords  
+
         String[] negativeKeywords = {
             "lỗi", "hỏng", "không hài lòng", "tệ", "khiếu nại", "muộn", "chậm", "xấu",
             "thất vọng", "bực mình", "khó chịu", "không ổn", "sai", "lỗi", "hỏng hóc",
             "complaint", "problem", "issue", "bad", "terrible", "awful", "disappointed"
         };
-        
-        // Neutral keywords
+
         String[] neutralKeywords = {
             "giá bao nhiêu", "cách sử dụng", "thông tin", "địa chỉ", "liên hệ", "hỏi",
             "tư vấn", "hướng dẫn", "giá", "price", "cost", "how to", "information",
             "address", "contact", "help", "hỗ trợ", "tư vấn", "câu hỏi"
         };
-        
-        // Check for positive keywords
+
         for (String keyword : positiveKeywords) {
             if (lowerContent.contains(keyword)) {
                 return "Positive";
             }
         }
-        
-        // Check for negative keywords
+
         for (String keyword : negativeKeywords) {
             if (lowerContent.contains(keyword)) {
                 return "Negative";
             }
         }
-        
-        // Check for neutral keywords
+
         for (String keyword : neutralKeywords) {
             if (lowerContent.contains(keyword)) {
                 return "Neutral";
             }
         }
-        
-        // Default to Neutral if no keywords found
+
         return "Neutral";
     }
     
@@ -737,18 +729,14 @@ public class ChatService {
             "gặp người quản lý",
             "gặp quản lý",
             "có ai không",
-            "kết nối tôi với bộ phận hỗ trợ",
-            "kết nối với bộ phận hỗ trợ",
+            "bộ phận hỗ trợ",
             "yêu cầu hoàn tiền",
             "hoàn tiền",
             "đổi sản phẩm",
             "đổi hàng",
             "hỗ trợ trực tiếp",
-            "nói chuyện với người thật",
-            "support agent",
             "human agent",
             "talk to human",
-            "talk to agent",
             "contact support",
             "sửa thông tin cá nhân",
             "sửa địa chỉ giao hàng",

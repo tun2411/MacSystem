@@ -16,15 +16,41 @@ public class DataSeeder {
     @Bean
     CommandLineRunner seed(UserRepository users, AgentRepository agents) {
         return args -> {
+            // DataSeeder đã được comment out vì dữ liệu đã có trong database
+            /*
             if (users.count() == 0) {
-                User u = new User();
-                u.setId("00000000-0000-0000-0000-000000000001");
-                u.setEmail("demo@shop.local");
-                u.setDisplayName("Demo User");
-                u.setStaff(false);
-                u.setPasswordHash("noop");
-                u.setCreatedAt(Instant.now());
-                users.save(u);
+                try {
+                    User u = new User();
+                    u.setId("00000000-0000-0000-0000-000000000001");
+                    u.setEmail("demo@shop.local");
+                    u.setDisplayName("Demo User");
+                    u.setStaff(false);
+                    u.setAdmin(false);
+                    u.setPasswordHash("noop");
+                    u.setCreatedAt(Instant.now());
+                    users.save(u);
+                } catch (Exception e) {
+                    System.err.println("Warning: Could not create demo user. Make sure to run migration script: migration_add_is_admin.sql");
+                    System.err.println("Error: " + e.getMessage());
+                }
+            }
+            
+            // Tạo tài khoản admin mặc định
+            try {
+                if (users.findByEmail("admin@maschat.local").isEmpty()) {
+                    User admin = new User();
+                    admin.setId(Ids.newUuid());
+                    admin.setEmail("admin@maschat.local");
+                    admin.setDisplayName("System Admin");
+                    admin.setStaff(false);
+                    admin.setAdmin(true);
+                    admin.setPasswordHash("admin123"); // Mật khẩu đơn giản cho demo
+                    admin.setCreatedAt(Instant.now());
+                    users.save(admin);
+                }
+            } catch (Exception e) {
+                System.err.println("Warning: Could not create admin user. Make sure to run migration script: migration_add_is_admin.sql");
+                System.err.println("Error: " + e.getMessage());
             }
             if (agents.count() == 0) {
                 Agent pos = new Agent();
@@ -85,6 +111,7 @@ public class DataSeeder {
                 staffAgent.setCreatedAt(Instant.now());
                 agents.save(staffAgent);
             }
+            */
         };
     }
 }
