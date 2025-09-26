@@ -166,8 +166,7 @@ public class ChatService {
         m.setContentType("text/markdown");
         m.setCreatedAt(userMessageTime);
         messageRepository.save(m);
-        
-        // Force flush to ensure user message is saved first
+
         entityManager.flush();
 
         // Broadcast new message to subscribers
@@ -190,7 +189,7 @@ public class ChatService {
             return m;
         }
 
-        // Check if staff is engaged - if so, don't send bot responses
+        // Check staff is engaged - ngăn bot response
         Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
         if (conversation != null && Boolean.TRUE.equals(conversation.getIsStaffEngaged())) {
             System.out.println("DEBUG: Staff is engaged, skipping bot response for conversation " + conversationId);
@@ -207,9 +206,7 @@ public class ChatService {
                 checkAndSwitchAgent(conversationId, content);
             }
             
-            // Send agent response with proper timing and retry mechanism
-            // Ensure agent response is always after user message with sufficient delay
-            // Use a longer delay to ensure proper ordering
+            //Phản hồi bot đến sau tin nhắn người dùng
             sendAgentResponseWithRetry(conversationId, userMessageTime.plusMillis(1000));
         } catch (Exception e) {
             // Log error but don't fail the user message
@@ -290,8 +287,6 @@ public class ChatService {
     }
 
     private void sendAgentResponse(String conversationId, Instant responseTime) {
-        // Check if there's already an agent response for this conversation within the last 2 seconds
-        // This prevents duplicate responses from retry mechanism
         Instant twoSecondsAgo = responseTime.minusSeconds(2);
         List<Message> recentAgentMessages = messageRepository.findByConversationIdAndSenderTypeOrderByCreatedAtAsc(conversationId, "agent");
         boolean hasRecentResponse = recentAgentMessages.stream()
@@ -412,10 +407,6 @@ public class ChatService {
         }
     }
 
-    private void triggerFakeAgents(String conversationId, Instant afterTime) {
-        // This method is now deprecated, use sendAgentResponse instead
-        sendAgentResponse(conversationId, afterTime);
-    }
 
     private void routeToAppropriateAgent(String conversationId, String content) {
         String agentKind = analyzeMessageContent(content);
@@ -606,33 +597,6 @@ public class ChatService {
         return "Neutral";
     }
     
-    private void addAgentToConversation(String conversationId, String agentKind) {
-        List<Agent> agents = agentRepository.findByKind(agentKind);
-        if (!agents.isEmpty()) {
-            Agent agent = agents.get(0);
-            
-            // Check if this agent is already participating
-            List<ConversationParticipant> existingParticipants = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversationId);
-            boolean agentExists = existingParticipants.stream()
-                .anyMatch(p -> "agent".equals(p.getParticipantType()) && agent.getId().equals(p.getAgentId()));
-            
-            if (!agentExists) {
-                ConversationParticipant p = new ConversationParticipant();
-                p.setConversationId(conversationId);
-                p.setParticipantType("agent");
-                p.setAgentId(agent.getId());
-                p.setRoleKey("agent");
-                p.setJoinedAt(Instant.now());
-                participantRepository.save(p);
-            }
-        }
-    }
-    
-    private String getAgentKindById(String agentId) {
-        return agentRepository.findById(agentId)
-            .map(Agent::getKind)
-            .orElse("Unknown");
-    }
 
     private String generateFakeReply(String kind) {
         Map<String, String> canned = Map.of(

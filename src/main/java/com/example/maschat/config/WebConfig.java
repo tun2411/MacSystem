@@ -19,7 +19,6 @@ public class WebConfig implements WebMvcConfigurer {
     
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // Tạm thời comment out để test logout
         /*
         registry.addInterceptor(autoLoginInterceptor)
                 .addPathPatterns("/**")

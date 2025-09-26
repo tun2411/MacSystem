@@ -37,14 +37,14 @@ public class DataSeeder {
             
             // Tạo tài khoản admin mặc định
             try {
-                if (users.findByEmail("admin@maschat.local").isEmpty()) {
+                if (users.findByEmail("admin@gmail.com").isEmpty()) {
                     User admin = new User();
                     admin.setId(Ids.newUuid());
-                    admin.setEmail("admin@maschat.local");
+                    admin.setEmail("admin@gmail.com");
                     admin.setDisplayName("System Admin");
                     admin.setStaff(false);
                     admin.setAdmin(true);
-                    admin.setPasswordHash("admin123"); // Mật khẩu đơn giản cho demo
+                    admin.setPasswordHash("$2a$10$vvl34CELMhtI2jLfJCOPce8iWL6EwATBNUIylTC8fAgUQ9p0zpgnW"); // Mật khẩu đơn giản cho demo
                     admin.setCreatedAt(Instant.now());
                     users.save(admin);
                 }

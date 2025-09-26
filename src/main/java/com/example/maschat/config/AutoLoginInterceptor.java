@@ -18,8 +18,7 @@ public class AutoLoginInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String requestURI = request.getRequestURI();
-        
-        // Không chạy auto-login trên trang logout và login
+
         if (requestURI.contains("/logout") || requestURI.contains("/login")) {
             return true;
         }
@@ -37,6 +36,9 @@ public class AutoLoginInterceptor implements HandlerInterceptor {
             for (Cookie cookie : cookies) {
                 if ("rememberMe".equals(cookie.getName())) {
                     String userId = cookie.getValue();
+                    if (userId == null || userId.isBlank()) {
+                        continue;
+                    }
                     System.out.println("DEBUG: AutoLoginInterceptor found rememberMe cookie for user: " + userId);
                     authService.findById(userId).ifPresent(user -> {
                         // Tạo session mới và lưu thông tin user

@@ -31,6 +31,9 @@ public class AuthController {
             for (jakarta.servlet.http.Cookie cookie : cookies) {
                 if ("rememberMe".equals(cookie.getName())) {
                     String userId = cookie.getValue();
+                    if (userId == null || userId.isBlank()) {
+                        continue;
+                    }
                     return authService.findById(userId)
                             .map(u -> {
                                 session.setAttribute("uid", u.getId());
@@ -67,6 +70,12 @@ public class AuthController {
                         rememberCookie.setMaxAge(30 * 24 * 60 * 60); // 30 ngày
                         rememberCookie.setPath("/");
                         rememberCookie.setHttpOnly(true);
+                        response.addCookie(rememberCookie);
+                    } else {
+                        // Không chọn ghi nhớ: xóa cookie nếu còn tồn tại
+                        jakarta.servlet.http.Cookie rememberCookie = new jakarta.servlet.http.Cookie("rememberMe", "");
+                        rememberCookie.setMaxAge(0);
+                        rememberCookie.setPath("/");
                         response.addCookie(rememberCookie);
                     }
                     
@@ -108,12 +117,10 @@ public class AuthController {
 
     @GetMapping("/logout-simple")
     public String logoutSimple(HttpSession session, jakarta.servlet.http.HttpServletResponse response) {
-        System.out.println("DEBUG: Simple logout requested");
         
         // Xóa session đơn giản
         if (session != null) {
             session.invalidate();
-            System.out.println("DEBUG: Session invalidated");
         }
         
         // Xóa cookie
@@ -126,8 +133,6 @@ public class AuthController {
     }
 
     private String performLogout(HttpSession session, jakarta.servlet.http.HttpServletResponse response) {
-        System.out.println("DEBUG: Logout requested");
-        System.out.println("DEBUG: Session ID before logout: " + (session != null ? session.getId() : "null"));
         
         // Xóa tất cả session attributes trước
         if (session != null) {
@@ -135,7 +140,6 @@ public class AuthController {
             session.removeAttribute("uname");
             session.removeAttribute("isStaff");
             session.removeAttribute("isAdmin");
-            System.out.println("DEBUG: Session attributes cleared");
         }
         
         // Xóa Remember Me cookie với nhiều cách
@@ -151,7 +155,7 @@ public class AuthController {
         rememberCookie2.setPath("/");
         rememberCookie2.setHttpOnly(false);
         response.addCookie(rememberCookie2);
-        
+
         System.out.println("DEBUG: Cookies cleared, invalidating session");
         if (session != null) {
             session.invalidate();

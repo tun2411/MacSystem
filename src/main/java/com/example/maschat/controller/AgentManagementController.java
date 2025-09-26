@@ -59,7 +59,7 @@ public class AgentManagementController {
         }
         
         if (!hasAccess) {
-            return "redirect:/login"; // Không có quyền truy cập
+            return "redirect:/login";
         }
 
         model.addAttribute("conversationId", conversationId);
@@ -90,7 +90,7 @@ public class AgentManagementController {
         // Kiểm tra quyền truy cập cuộc trò chuyện cho staff
         Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
         if (conversation == null) {
-            return "redirect:/login"; // Cuộc trò chuyện không tồn tại
+            return "redirect:/login";
         }
         
         // Staff có quyền nếu cuộc trò chuyện đã có staff participants hoặc được đánh dấu isStaffEngaged
@@ -102,7 +102,7 @@ public class AgentManagementController {
         }
         
         if (!hasAccess) {
-            return "redirect:/login"; // Không có quyền truy cập
+            return "redirect:/login";
         }
 
         conversationService.updateConversationAgents(conversationId, agentId);

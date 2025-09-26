@@ -51,7 +51,7 @@ public class ChatViewController {
                 hasAccess = true;
             }
         } else {
-            // User thông thường chỉ có thể truy cập cuộc trò chuyện do chính họ tạo ra
+            // Use chỉ có thể truy cập cuộc trò chuyện do chính họ tạo ra
             hasAccess = uid.equals(conversation.getCreatedByUser());
         }
         
