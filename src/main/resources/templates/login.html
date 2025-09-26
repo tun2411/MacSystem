@@ -195,6 +195,28 @@
             text-decoration: underline;
         }
 
+        .remember-me {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0 !important;
+            font-weight: 500;
+        }
+
+         .remember-me input[type="checkbox"] {
+             width: 20px;
+             height: 20px;
+             margin-right: 12px;
+             cursor: pointer;
+             accent-color: #667eea;
+         }
+
+         .checkmark {
+             display: none;
+         }
+
         .floating-shapes {
             position: fixed;
             top: 0;
@@ -288,6 +310,14 @@
                     <span class="input-icon">🔒</span>
                 </div>
             </div>
+
+             <div class="form-group">
+                 <label class="remember-me">
+                     <input type="checkbox" name="rememberMe" value="true" />
+                     <span class="checkmark"></span>
+                     Ghi nhớ đăng nhập
+                 </label>
+             </div>
 
             <button type="submit" class="login-btn">
                 Đăng nhập

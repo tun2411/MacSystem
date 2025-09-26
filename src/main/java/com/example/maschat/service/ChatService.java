@@ -83,7 +83,7 @@ public class ChatService {
             welcomeMsg.setContentType("text/markdown");
             welcomeMsg.setCreatedAt(Instant.now());
             messageRepository.save(welcomeMsg);
-            System.out.println("DEBUG: Welcome message order: " + welcomeMessageOrder);
+//            System.out.println("DEBUG: Welcome message order: " + welcomeMessageOrder);
         }
 
         // Add other agents if specified (for staff management)
@@ -135,7 +135,7 @@ public class ChatService {
             Agent selectedAgent = selectedAgentForRole;
             boolean isStaffAgent = selectedAgent != null && "StaffAgent".equals(selectedAgent.getKind());
             conversation.setIsStaffEngaged(isStaffAgent);
-            System.out.println("DEBUG: Updated isStaffEngaged = " + isStaffAgent + " for conversation " + conversationId);
+//            System.out.println("DEBUG: Updated isStaffEngaged = " + isStaffAgent + " for conversation " + conversationId);
             conversationRepository.save(conversation);
         }
         
@@ -240,7 +240,7 @@ public class ChatService {
         
         // Force flush to ensure staff message is saved
         entityManager.flush();
-        
+
         // Staff messages don't trigger agent responses
         System.out.println("DEBUG: Staff message sent - no agent response triggered");
         
@@ -323,7 +323,7 @@ public class ChatService {
         long agentCount = ps.stream()
             .filter(p -> "agent".equals(p.getParticipantType()) && !"supervisor".equals(p.getRoleKey()))
             .count();
-        
+
         System.out.println("DEBUG: Found " + agentCount + " active agents in conversation " + conversationId);
         System.out.println("DEBUG: Agent response time: " + finalResponseTime);
         

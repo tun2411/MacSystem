@@ -36,6 +36,10 @@ public class AuthService {
         return userRepository.findByEmail(email)
                 .filter(u -> passwordEncoder.matches(rawPassword, u.getPasswordHash()));
     }
+
+    public Optional<User> findById(String userId) {
+        return userRepository.findById(userId);
+    }
 }
 
 

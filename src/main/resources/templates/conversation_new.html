@@ -12,7 +12,6 @@
         button{padding:10px 20px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}
         button:hover{background:#1d4ed8}
         a{color:#2563eb;text-decoration:none}
-        .info{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin:16px 0;color:#0369a1}
         .back{margin-bottom:16px}
     </style>
 </head>
@@ -22,10 +21,6 @@
         <a th:href="@{/conversations}">◀ All Conversations</a>
     </div>
     <h2>Create New Conversation</h2>
-    
-    <div class="info">
-        <strong>Supervisor Agent</strong> sẽ tự động tham gia cuộc trò chuyện và chào mừng bạn.
-    </div>
     
     <form method="post" th:action="@{/conversations/start}">
         <div class="form-group">
