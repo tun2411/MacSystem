@@ -65,9 +65,10 @@ public class ConversationController {
 
     @GetMapping("/conversations/new")
     public String newConversation(Model model, jakarta.servlet.http.HttpSession session) {
-        // Kiểm tra nếu là staff thì chuyển hướng về trang conversations
+        // Chặn staff và admin truy cập trang tạo mới
         Boolean isStaff = (Boolean) session.getAttribute("isStaff");
-        if (isStaff != null && isStaff) {
+        Boolean isAdmin = (Boolean) session.getAttribute("isAdmin");
+        if ((isStaff != null && isStaff) || (isAdmin != null && isAdmin)) {
             return "redirect:/conversations";
         }
         
@@ -85,9 +86,10 @@ public class ConversationController {
                                     @RequestParam(required = false) List<String> agentIds,
                                     Model model,
                                     jakarta.servlet.http.HttpSession session) {
-        // Kiểm tra nếu là staff thì chuyển hướng về trang conversations
+        // Chặn staff và admin tạo cuộc trò chuyện
         Boolean isStaff = (Boolean) session.getAttribute("isStaff");
-        if (isStaff != null && isStaff) {
+        Boolean isAdmin = (Boolean) session.getAttribute("isAdmin");
+        if ((isStaff != null && isStaff) || (isAdmin != null && isAdmin)) {
             return "redirect:/conversations";
         }
         

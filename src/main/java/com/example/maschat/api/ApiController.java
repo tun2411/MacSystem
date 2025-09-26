@@ -50,9 +50,10 @@ public class ApiController {
 
     @PostMapping("/conversations")
     public ResponseEntity<Conversation> createConversation(@RequestBody CreateConversationRequest req, jakarta.servlet.http.HttpSession session) {
-        // Kiểm tra nếu là staff thì từ chối tạo cuộc trò chuyện
+        // Chặn staff và admin tạo cuộc trò chuyện
         Boolean isStaff = (Boolean) session.getAttribute("isStaff");
-        if (isStaff != null && isStaff) {
+        Boolean isAdmin = (Boolean) session.getAttribute("isAdmin");
+        if ((isStaff != null && isStaff) || (isAdmin != null && isAdmin)) {
             return ResponseEntity.status(403).body(null);
         }
         

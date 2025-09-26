@@ -66,7 +66,7 @@
       <div class="search">
         <input id="search" type="text" placeholder="Tìm theo tiêu đề hoặc trạng thái..." autocomplete="off" />
       </div>
-      <a class="btn" th:href="@{/conversations/new}" th:if="${session.isStaff == null or !session.isStaff}">New conversation</a>
+      <a class="btn" th:href="@{/conversations/new}" th:if="${(session.isStaff == null or !session.isStaff) and (session.isAdmin == null or !session.isAdmin)}">New conversation</a>
     </div>
   </div>
 
