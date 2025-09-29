@@ -11,7 +11,6 @@ public class AgentResponseService {
 
 
     public void triggerResponses(String conversationId, java.time.Instant afterTime) {
-        // delegate to existing logic for now
         try {
             java.lang.reflect.Method m = ChatService.class.getDeclaredMethod("sendAgentResponseWithRetry", String.class, java.time.Instant.class);
             m.setAccessible(true);

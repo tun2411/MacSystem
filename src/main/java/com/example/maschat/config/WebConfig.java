@@ -14,7 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
     
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        // no-op; placeholder in case we need static mappings
+
     }
     
     @Override

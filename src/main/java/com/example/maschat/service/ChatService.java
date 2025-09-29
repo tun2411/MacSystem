@@ -83,10 +83,8 @@ public class ChatService {
             welcomeMsg.setContentType("text/markdown");
             welcomeMsg.setCreatedAt(Instant.now());
             messageRepository.save(welcomeMsg);
-//            System.out.println("DEBUG: Welcome message order: " + welcomeMessageOrder);
         }
 
-        // Add other agents if specified (for staff management)
         for (String agentId : agentIds) {
             ConversationParticipant p = new ConversationParticipant();
             p.setConversationId(c.getId());
@@ -101,7 +99,6 @@ public class ChatService {
 
     @Transactional
     public void updateConversationAgents(String conversationId, String agentId) {
-        // If no selection provided, treat as no-op to avoid clearing state
         if (agentId == null || agentId.isEmpty()) {
             return;
         }
@@ -113,8 +110,6 @@ public class ChatService {
                 participantRepository.delete(p);
             }
         }
-        
-        // Force flush to ensure deletions are committed
         entityManager.flush();
         
         // Add the selected agent
@@ -145,7 +140,6 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public List<Message> getMessages(String conversationId) {
-        // Use deterministic ordering: by createdAt, then sender priority (user, staff, agent)
         return messageRepository.findOrderedForConversation(conversationId);
     }
 
@@ -169,10 +163,8 @@ public class ChatService {
 
         entityManager.flush();
 
-        // Broadcast new message to subscribers
         broadcastNewMessage(conversationId, m);
 
-        // If the user is requesting to talk to human staff, switch participants to staff agent and short-circuit bot logic
         if (isHumanStaffRequested(content)) {
             routeToStaffAgent(conversationId);
             Message confirm = new Message();
@@ -234,14 +226,11 @@ public class ChatService {
         m.setContentType("text/markdown");
         m.setCreatedAt(staffMessageTime);
         messageRepository.save(m);
-        
-        // Force flush to ensure staff message is saved
+
         entityManager.flush();
 
-        // Staff messages don't trigger agent responses
         System.out.println("DEBUG: Staff message sent - no agent response triggered");
-        
-        // Broadcast new message to subscribers
+
         broadcastNewMessage(conversationId, m);
         
         return m;
@@ -255,27 +244,23 @@ public class ChatService {
         while (retryCount < maxRetries) {
             try {
                 sendAgentResponse(conversationId, currentResponseTime);
-                break; // Success, exit retry loop
+                break;
             } catch (Exception e) {
                 retryCount++;
                 System.err.println("Attempt " + retryCount + " failed for conversation " + conversationId + ": " + e.getMessage());
                 
                 if (retryCount >= maxRetries) {
                     System.err.println("Max retries reached for conversation " + conversationId);
-                    // Try to add a default agent as last resort
                     try {
                         addDefaultAgent(conversationId);
-                        // Ensure final attempt has a later timestamp
                         currentResponseTime = currentResponseTime.plusMillis(100);
                         sendAgentResponse(conversationId, currentResponseTime);
                     } catch (Exception finalException) {
                         System.err.println("Final attempt failed for conversation " + conversationId + ": " + finalException.getMessage());
                     }
                 } else {
-                    // Wait before retry and increment timestamp
                     try {
-                        Thread.sleep(100 * retryCount); // Progressive delay
-                        // Ensure each retry has a later timestamp
+                        Thread.sleep(100 * retryCount);
                         currentResponseTime = currentResponseTime.plusMillis(100 * retryCount);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -333,21 +318,18 @@ public class ChatService {
         }
         
         boolean responseSent = false;
-        
-        // If staff is engaged, do not send bot replies
+
         if (ps.stream().anyMatch(p -> "agent".equals(p.getParticipantType()) && "staff".equals(p.getRoleKey()))) {
             System.out.println("DEBUG: Staff engaged, skipping bot response");
             return;
         }
 
-        // Also check the conversation's isStaffEngaged flag
         Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
         if (conversation != null && Boolean.TRUE.equals(conversation.getIsStaffEngaged())) {
             System.out.println("DEBUG: Conversation marked as staff engaged, skipping bot response");
             return;
         }
 
-        // Find the first active agent (excluding supervisor and staff)
         for (ConversationParticipant p : ps) {
             if (!"agent".equals(p.getParticipantType()) || "supervisor".equals(p.getRoleKey())) continue;
             
@@ -365,15 +347,13 @@ public class ChatService {
                 bot.setContentType("text/markdown");
                 bot.setCreatedAt(finalResponseTime);
                 messageRepository.save(bot);
-                
-                // Force flush to ensure agent message is saved
+
                 entityManager.flush();
 
-                // Broadcast new agent message
                 broadcastNewMessage(conversationId, bot);
             });
             responseSent = true;
-            break; // Only send one agent message
+            break;
         }
         
         // If still no response was sent, try supervisor as fallback
@@ -394,11 +374,9 @@ public class ChatService {
                         bot.setContentType("text/markdown");
                         bot.setCreatedAt(finalResponseTime);
                         messageRepository.save(bot);
-                        
-                        // Force flush to ensure agent message is saved
+
                         entityManager.flush();
 
-                        // Broadcast new supervisor message
                         broadcastNewMessage(conversationId, bot);
                     });
                     break;
@@ -412,7 +390,6 @@ public class ChatService {
         String agentKind = analyzeMessageContent(content);
         if (!"Supervisor".equals(agentKind)) {
             switchToAgent(conversationId, agentKind);
-            // Supervisor leaves after routing
             removeSupervisorFromConversation(conversationId);
         }
     }
@@ -421,18 +398,15 @@ public class ChatService {
         String agentKind = analyzeMessageContent(content);
         if (!"Supervisor".equals(agentKind)) {
             switchToAgent(conversationId, agentKind);
-            // Supervisor leaves after routing
             removeSupervisorFromConversation(conversationId);
         }
     }
 
     private void routeToStaffAgent(String conversationId) {
-        // Add StaffAgent participant and remove other non-supervisor agents
         List<Agent> staffAgents = agentRepository.findByKind("StaffAgent");
         Agent staff = staffAgents.isEmpty() ? null : staffAgents.get(0);
         List<ConversationParticipant> participants = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversationId);
 
-        // Remove all non-supervisor agents
         for (ConversationParticipant p : participants) {
             if ("agent".equals(p.getParticipantType()) && !"supervisor".equals(p.getRoleKey())) {
                 participantRepository.delete(p);
@@ -440,7 +414,7 @@ public class ChatService {
         }
         entityManager.flush();
 
-        // Add staff participant
+
         if (staff != null) {
             ConversationParticipant p = new ConversationParticipant();
             p.setConversationId(conversationId);
@@ -453,7 +427,7 @@ public class ChatService {
             entityManager.flush();
         }
 
-        // Set staff engaged flag to true
+
         Conversation conversation = conversationRepository.findById(conversationId).orElse(null);
         if (conversation != null) {
             conversation.setIsStaffEngaged(true);
@@ -461,17 +435,14 @@ public class ChatService {
             System.out.println("DEBUG: Set isStaffEngaged = true for conversation " + conversationId);
         }
 
-        // Remove supervisor once staff is assigned
         removeSupervisorFromConversation(conversationId);
     }
     
     private void switchToAgent(String conversationId, String agentKind) {
-        // First, add the new agent if it's not already participating
         List<Agent> agents = agentRepository.findByKind(agentKind);
         if (!agents.isEmpty()) {
             Agent agent = agents.get(0);
-            
-            // Check if this agent is already participating
+
             List<ConversationParticipant> participants = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversationId);
             boolean agentExists = participants.stream()
                 .anyMatch(p -> "agent".equals(p.getParticipantType()) && agent.getId().equals(p.getAgentId()));
@@ -487,27 +458,22 @@ public class ChatService {
                 System.out.println("DEBUG: Added agent " + agentKind + " to conversation " + conversationId);
             }
         }
-        
-        // Then remove all existing agents (except supervisor and the new one) manually
+
         List<ConversationParticipant> participants = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversationId);
         for (ConversationParticipant p : participants) {
             if ("agent".equals(p.getParticipantType()) && !"supervisor".equals(p.getRoleKey())) {
-                // Don't delete the agent we just added
                 if (agents.isEmpty() || !agents.get(0).getId().equals(p.getAgentId())) {
                     participantRepository.delete(p);
                     System.out.println("DEBUG: Removed old agent from conversation " + conversationId);
                 }
             }
         }
-        
-        // Force flush to ensure changes are committed
+
         entityManager.flush();
     }
     
     private void removeSupervisorFromConversation(String conversationId) {
         List<ConversationParticipant> participants = participantRepository.findByConversationIdOrderByJoinedAtAsc(conversationId);
-        
-        // Only remove supervisor if there are other agents available
         long otherAgentCount = participants.stream()
             .filter(p -> "agent".equals(p.getParticipantType()) && !"supervisor".equals(p.getRoleKey()))
             .count();
@@ -619,13 +585,12 @@ public class ChatService {
         return messageRepository.save(m);
     }
     
-    @Scheduled(fixedDelay = 10000) // Run every 10 seconds
+    @Scheduled(fixedDelay = 10000)
     @Transactional
     public void checkForMissedResponses() {
         try {
             Instant fiveMinutesAgo = Instant.now().minus(5, ChronoUnit.MINUTES);
-            
-            // Find conversations with user messages that don't have agent responses
+
             List<Conversation> conversations = conversationRepository.findAll();
             
             for (Conversation conversation : conversations) {

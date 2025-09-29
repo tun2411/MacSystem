@@ -33,7 +33,7 @@ public class ApiController {
     public List<Conversation> listConversations(jakarta.servlet.http.HttpSession session) {
         String uid = (String) session.getAttribute("uid");
         if (uid == null) {
-            return List.of(); // Trả về danh sách rỗng nếu chưa đăng nhập
+            return List.of();
         }
         
         Boolean isStaff = (Boolean) session.getAttribute("isStaff");
