@@ -14,7 +14,9 @@ CREATE TABLE `users` (
                          UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+
 LOCK TABLES `users` WRITE;
+--      Các User đều có Pass là "123456"
 INSERT INTO `users` VALUES
                         ('00000000-0000-0000-0000-000000000001','demo@shop.local','Demo User',0,'noop','2025-09-18 07:37:39',0),
                         ('29bfd43f-e58f-4b27-abd3-58be3f6c4af1','tuandang24112004@gmail.com','tun123',0,'$2a$10$3R5YyVUYyf/RU/PEw8.AieRe0FR9JcH9pvpxmQ/koaehMnEP7Pcnq','2025-09-19 01:30:37',0),
